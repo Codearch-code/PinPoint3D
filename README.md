@@ -2,6 +2,8 @@
 
 An elegant, lightweight, self-hosted web platform designed for architects, designers, and real estate developers to share 3D models with clients and collaborate using interactive pin-based comments in a pure white-labeled space.
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-yellow.svg?style=flat-square&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/codearch)
+
 *Read this in other languages: [Polski (PL)](#polski-pl)*
 
 ---
@@ -85,6 +87,8 @@ To run the application locally without Docker:
 # Polski (PL)
 
 Elegancka, lekka, hostowana samodzielnie platforma internetowa stworzona dla architektów, projektantów i deweloperów w celu udostępniania modeli 3D klientom i współpracy przy użyciu interaktywnych komentarzy (pinów) w przestrzeni o własnym brandingu (white-label).
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Wesprzyj-yellow.svg?style=flat-square&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/codearch)
 
 ---
 

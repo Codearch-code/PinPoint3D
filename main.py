@@ -376,7 +376,7 @@ def check_model_password_auth(filename: str, request: Request, password: Optiona
         password = request.headers.get("X-Model-Password")
     return password == m_settings["password_value"]
 
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "SuperTajneHasloViewer2026!")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
 # Setup templates
 def global_settings_context(request: Request) -> dict:

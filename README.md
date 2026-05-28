@@ -33,33 +33,15 @@ An elegant, lightweight, self-hosted web platform designed for architects, desig
 
 ## Quick Start (Docker)
 
-The fastest way to deploy the 3D Viewer Hub is using Docker:
+The fastest way to deploy PinPoint3D is using Docker Compose:
 
-1. Create a `docker-compose.yml` file:
-   ```yaml
-   version: '3.8'
-   services:
-     3d-viewer:
-       image: ghcr.io/your-username/3d-viewer:latest  # Or build locally
-       build: .
-       ports:
-         - "8000:8000"
-       environment:
-         - ADMIN_PASSWORD=ChangeMeSecurity2026!
-       volumes:
-         - 3d-viewer-data:/app/data
-       restart: always
-
-   volumes:
-     3d-viewer-data:
-   ```
-
-2. Run the command:
+1. Copy [docker-compose.yml](docker-compose.yml) and [.env.example](.env.example) to your server or local directory.
+2. Rename `.env.example` to `.env` and set your secure administrator password in the `ADMIN_PASSWORD` variable.
+3. Run the command:
    ```bash
    docker compose up -d
    ```
-
-3. Open your browser and navigate to `http://localhost:8000`. Login with the `ADMIN_PASSWORD` you configured.
+4. Open your browser and navigate to `http://localhost:8000`. Log in using the password you set in the `.env` file.
 
 ---
 
@@ -109,27 +91,12 @@ Elegancka, lekka, hostowana samodzielnie platforma internetowa stworzona dla arc
 
 ## Uruchomienie za pomocą Dockera
 
-1. Utwórz plik `docker-compose.yml`:
-   ```yaml
-   version: '3.8'
-   services:
-     3d-viewer:
-       build: .
-       ports:
-         - "8000:8000"
-       environment:
-         - ADMIN_PASSWORD=ZmienMnieBezpieczenstwo2026!
-       volumes:
-         - 3d-viewer-data:/app/data
-       restart: always
+Najszybszym sposobem na wdrożenie aplikacji jest użycie Docker Compose z gotowym obrazem:
 
-   volumes:
-     3d-viewer-data:
-   ```
-
-2. Uruchom kontener:
+1. Pobierz pliki [docker-compose.yml](docker-compose.yml) oraz [.env.example](.env.example) do swojego folderu roboczego.
+2. Zmień nazwę pliku `.env.example` na `.env` i ustaw bezpieczne hasło administratora w zmiennej `ADMIN_PASSWORD`.
+3. Uruchom kontener poleceniem:
    ```bash
    docker compose up -d
    ```
-
-3. Otwórz w przeglądarce adres `http://localhost:8000`. Zaloguj się hasłem podanym w zmiennej `ADMIN_PASSWORD`.
+4. Otwórz w przeglądarce adres `http://localhost:8000`. Zaloguj się hasłem ustawionym w pliku `.env`.

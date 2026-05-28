@@ -1,0 +1,28 @@
+# ====================================================================
+# PinPoint3D - Docker Compose Configuration for Self-Hosters
+# ====================================================================
+# 
+# This file allows you to run the PinPoint3D viewer platform with a single 
+# command, using the official pre-built image from GitHub Container Registry.
+#
+# Requirements:
+# 1. Create a local '.env' file in the same directory (copy from '.env.example').
+# 2. Run: 'docker compose up -d'
+# 3. Access the application at: http://localhost:8000
+#
+
+services:
+  pinpoint3d:
+    image: ghcr.io/codearch-code/pinpoint3d:latest
+    container_name: pinpoint3d
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - pinpoint-data:/app/data
+    env_file:
+      - .env
+
+volumes:
+  pinpoint-data:
+    driver: local

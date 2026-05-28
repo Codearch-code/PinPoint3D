@@ -1,4 +1,4 @@
-# Codearch 3D Viewer Hub
+# PinPoint3D
 
 An elegant, lightweight, self-hosted web platform designed for architects, designers, and real estate developers to share 3D models with clients and collaborate using interactive pin-based comments in a pure white-labeled space.
 

@@ -1,0 +1,2863 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ filename }} | {{ s.hub_name }}</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #f3f4f6;
+            --primary-gradient: linear-gradient(135deg, {{ s.primary_color }} 0%, {{ s.accent_color }} 100%);
+            --card-bg: rgba(20, 20, 27, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-muted: #9ca3af;
+            --accent: {{ s.accent_color }};
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s ease;
+        }
+
+        .viewer-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            min-height: 0;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+
+        /* Loading spinner */
+        #loader-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            z-index: 150;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #a855f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #loader-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4b5563; /* Darker text for white default background */
+        }
+
+        /* Non-embed Header styling */
+        {% if not is_embed %}
+        header {
+            background: rgba(11, 11, 15, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-left .logo {
+            height: 38px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .title-area h1 {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .title-area p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .btn-back {
+            text-decoration: none;
+            color: var(--text-color);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        {% endif %}
+
+        /* Floating Settings Gear Button */
+        .settings-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 200;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .settings-toggle:hover {
+            transform: rotate(45deg);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .settings-toggle svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: var(--text-color);
+            stroke-width: 2;
+        }
+
+        /* Sliding Settings Panel */
+        .settings-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 320px;
+            height: 100%;
+            background: rgba(15, 15, 22, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid var(--card-border);
+            padding: 80px 24px 24px 24px;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+            z-index: 190;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow-y: auto;
+        }
+
+        .settings-panel.open {
+            transform: translateX(0);
+        }
+
+        .panel-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .panel-section h3 {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 6px;
+        }
+
+        /* Color choices grid */
+        .color-grid {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .color-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-dot:hover {
+            transform: scale(1.1);
+        }
+
+        .color-dot.active {
+            border-color: #374151; /* Dark border for white dot */
+            transform: scale(1.05);
+        }
+
+        .color-picker-wrapper {
+            position: relative;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-picker-wrapper input[type="color"] {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            width: 50px;
+            height: 50px;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Form Controls */
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-row label {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Modern Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-round {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .slider-round:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider-round {
+            background: var(--primary-gradient);
+        }
+
+        input:checked + .slider-round:before {
+            transform: translateX(22px);
+        }
+
+        /* Range Slider */
+        .range-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .range-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .range-val {
+            color: var(--accent);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            accent-color: var(--accent);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border: 0;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .btn-reset {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-reset:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Controls info card */
+        .controls-info {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            background: rgba(11, 11, 15, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--card-border);
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 12px;
+            pointer-events: none;
+            color: #d1d5db;
+            z-index: 10;
+        }
+
+        .controls-info p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* View Mode Selector Floating Style */
+        .view-mode-selector {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 4px;
+            border-radius: 12px;
+            z-index: 200;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            transition: all 0.3s ease;
+        }
+
+        .view-mode-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+        }
+
+        .view-mode-btn:hover {
+            color: var(--text-color);
+        }
+
+        .view-mode-btn.active {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        /* --- Comments & Sub-components visibility styling --- */
+        .comments-overlay-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 180;
+            overflow: hidden;
+        }
+
+        .viewer-watermark {
+            position: absolute;
+            bottom: 20px;
+            right: 24px;
+            z-index: 90;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            color: var(--accent);
+            opacity: 0.7;
+            font-family: 'Outfit', sans-serif;
+            pointer-events: auto;
+            user-select: none;
+            transition: opacity 0.2s ease;
+        }
+        .viewer-watermark a {
+            color: var(--accent);
+            text-decoration: underline;
+            font-weight: 700;
+            transition: opacity 0.2s ease;
+        }
+        .viewer-watermark a:hover {
+            opacity: 0.85;
+        }
+
+        .comment-pin {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            pointer-events: auto;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s ease;
+            border: 2px solid white;
+        }
+
+        .comment-pin:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+            z-index: 60;
+        }
+
+        .comment-pin.architect {
+            background-color: #a855f7; /* Purple */
+        }
+
+        .comment-pin.client {
+            background-color: #06b6d4; /* Teal */
+        }
+
+        .comment-pin.mixed {
+            background: linear-gradient(135deg, #a855f7 50%, #06b6d4 50%);
+        }
+
+        /* Reply thread styles */
+        .bubble-replies {
+            max-height: 180px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 8px;
+        }
+
+        .bubble-reply {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding-left: 10px;
+            border-left: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .reply-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            gap: 6px;
+        }
+
+        .reply-text {
+            font-size: 15px;
+            line-height: 1.3;
+            color: #d1d5db;
+            word-break: break-word;
+        }
+
+        .reply-delete-btn {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0 4px;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+            flex-shrink: 0;
+        }
+
+        .reply-delete-btn:hover {
+            opacity: 1;
+        }
+
+        .bubble-reply-form {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 8px;
+        }
+
+        .comment-bubble {
+            position: absolute;
+            width: 360px;
+            background: rgba(15, 15, 22, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px;
+            color: var(--text-color);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+            transform: translate(-50%, -125%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .comment-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: rgba(15, 15, 22, 0.95) transparent;
+            display: block;
+            width: 0;
+        }
+
+        .comment-bubble.architect-bubble {
+            border-left: 4px solid #a855f7;
+        }
+
+        .comment-bubble.client-bubble {
+            border-left: 4px solid #06b6d4;
+        }
+
+        .bubble-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 4px;
+        }
+
+        .bubble-author {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .bubble-author.architect-type {
+            color: #d8b4fe;
+        }
+
+        .bubble-author.client-type {
+            color: #22d3ee;
+        }
+
+        .bubble-text {
+            word-break: break-word;
+            line-height: 1.4;
+            color: #e5e7eb;
+            font-size: 15px;
+        }
+
+        .bubble-input, .bubble-textarea {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .bubble-textarea {
+            resize: none;
+            height: 60px;
+        }
+
+        .bubble-input:focus, .bubble-textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .bubble-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+
+        .bubble-btn {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s;
+        }
+
+        .bubble-btn-save {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .bubble-btn-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+        }
+
+        .bubble-btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            margin-right: auto;
+        }
+
+        /* Comments Panel (Left sliding) */
+        .comments-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 320px;
+            height: 100%;
+            background: rgba(15, 15, 22, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid var(--card-border);
+            padding: 80px 24px 24px 24px;
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
+            z-index: 190;
+            transform: translateX(-100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow-y: auto;
+        }
+
+        .comments-panel.open {
+            transform: translateX(0);
+        }
+
+        .comments-toggle {
+            position: absolute;
+            top: 20px;
+            right: 140px;
+            width: 44px;
+            height: 44px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 200;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .comments-toggle:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .comments-toggle svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: var(--text-color);
+            stroke-width: 2;
+        }
+
+        /* Tree Toggle Button */
+        .tree-toggle {
+            position: absolute;
+            top: 20px;
+            right: 80px;
+            width: 44px;
+            height: 44px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 200;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .tree-toggle:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .tree-toggle svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: var(--text-color);
+            stroke-width: 2;
+        }
+
+        /* Sliding Tree Panel */
+        .tree-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 320px;
+            height: 100%;
+            background: rgba(15, 15, 22, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid var(--card-border);
+            padding: 80px 24px 24px 24px;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+            z-index: 190;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow-y: auto;
+        }
+
+        .tree-panel.open {
+            transform: translateX(0);
+        }
+
+        .btn-add-comment-mode {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-add-comment-mode:hover {
+            opacity: 0.9;
+        }
+
+        .btn-add-comment-mode.active {
+            background: #ef4444;
+        }
+
+        .comments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            flex: 1;
+            padding-right: 4px;
+        }
+
+        .comment-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+        }
+
+        .comment-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .comment-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .comment-item-author {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .comment-item-author.architect-type {
+            color: #d8b4fe;
+        }
+
+        .comment-item-author.client-type {
+            color: #22d3ee;
+        }
+
+        .comment-item-date {
+            color: var(--text-muted);
+        }
+
+        .comment-item-text {
+            font-size: 14px;
+            line-height: 1.4;
+            color: #e5e7eb;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .comment-item-replies {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .comment-item.expanded .comment-item-replies {
+            display: flex;
+        }
+
+        .comment-item.expanded .comment-item-text {
+            white-space: normal;
+        }
+
+        .chat-msg {
+            max-width: 85%;
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-size: 15px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .chat-msg.architect-msg {
+            align-self: flex-start;
+            background: rgba(168, 85, 247, 0.15);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 10px 10px 10px 2px;
+        }
+
+        .chat-msg.client-msg {
+            align-self: flex-end;
+            background: rgba(6, 182, 212, 0.15);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            border-radius: 10px 10px 2px 10px;
+        }
+
+        .chat-msg-author {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .chat-msg-author.architect-type { color: #d8b4fe; }
+        .chat-msg-author.client-type { color: #22d3ee; }
+
+        .element-visibility-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .element-visibility-row:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .panel-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 28px;
+            cursor: pointer;
+            z-index: 10;
+            line-height: 1;
+            transition: color 0.2s ease;
+        }
+        .panel-close-btn:hover {
+            color: #fff;
+        }
+
+        @media (max-width: 640px) {
+            header {
+                padding: 10px 16px;
+                gap: 10px;
+            }
+            .header-left {
+                gap: 8px;
+            }
+            .logo {
+                height: 28px !important;
+            }
+            .title-area h1 {
+                font-size: 14px !important;
+                max-width: 140px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .title-area p {
+                display: none;
+            }
+            .btn-back {
+                padding: 6px 10px !important;
+                font-size: 12px !important;
+            }
+            .controls-info {
+                display: none;
+            }
+            .view-mode-selector {
+                top: auto;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            .view-mode-btn span {
+                display: none;
+            }
+            .view-mode-btn {
+                padding: 8px 10px;
+            }
+            .comments-panel, .tree-panel, .settings-panel {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding-top: 60px !important;
+            }
+            .comments-panel {
+                left: 0 !important;
+                transform: translateX(-100%) !important;
+            }
+            .comments-panel.open {
+                transform: translateX(0) !important;
+            }
+            .tree-panel, .settings-panel {
+                right: 0 !important;
+                transform: translateX(100%) !important;
+            }
+            .tree-panel.open, .settings-panel.open {
+                transform: translateX(0) !important;
+            }
+            .settings-toggle {
+                top: 15px;
+                right: 15px;
+                width: 38px;
+                height: 38px;
+            }
+            .tree-toggle {
+                top: 15px;
+                right: 65px;
+                width: 38px;
+                height: 38px;
+            }
+            .comments-toggle {
+                top: 15px;
+                right: 115px;
+                width: 38px;
+                height: 38px;
+            }
+            .settings-toggle svg, .tree-toggle svg, .comments-toggle svg {
+                width: 18px;
+                height: 18px;
+            }
+            .comment-bubble {
+                position: fixed !important;
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                width: 90% !important;
+                max-width: 340px !important;
+                max-height: 80vh !important;
+                overflow-y: auto !important;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
+                bottom: auto !important;
+                right: auto !important;
+                z-index: 9999 !important;
+            }
+            .comment-bubble::after {
+                display: none !important;
+            }
+            .bubble-replies {
+                max-height: 140px;
+            }
+            .viewer-watermark {
+                bottom: 12px;
+                right: 16px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    {% if password_required %}
+    <div id="password-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #08080c; z-index: 99999; display: flex; justify-content: center; align-items: center; box-sizing: border-box; font-family: 'Outfit', sans-serif;">
+        <div style="background: rgba(18, 18, 24, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 40px 30px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div style="width: 60px; height: 60px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; display: inline-flex; justify-content: center; align-items: center; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </div>
+            <h2 style="font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 8px;">{{ t.viewer_password_required }}</h2>
+            <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">{{ 'Wprowadź hasło dostępu, aby wyświetlić trójwymiarowy model.' if current_lang == 'pl' else 'Please enter the access password to view the 3D model.' }}</p>
+            
+            <form onsubmit="window.verifyModelPassword(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                <input type="password" id="model-password-input" placeholder="{{ t.viewer_password_placeholder }}" required style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-size: 16px; outline: none; font-family: inherit; box-sizing: border-box; text-align: center;">
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; text-align: center; font-family: inherit; font-size: 15px;">
+                    {{ t.viewer_password_submit }}
+                </button>
+            </form>
+            <div id="password-error" style="color: var(--danger); font-size: 14px; font-weight: 600; margin-top: 14px; display: none;">
+                {{ t.viewer_password_incorrect }}
+            </div>
+            <div style="margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px; display: flex; justify-content: center;">
+                <a href="/api/lang/change/{% if current_lang == 'pl' %}en{% else %}pl{% endif %}" style="text-decoration: none; color: var(--text-muted); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='var(--text-muted)'">
+                    🌐 {% if current_lang == 'pl' %}English (EN){% else %}Polski (PL){% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not is_embed %}
+    <header>
+        <div class="header-left">
+            <a href="/" title="Panel Główny">
+                {% if s.logo_filename %}
+                <img class="logo" src="/logo.png" alt="Logo">
+                {% else %}
+                <img class="logo" src="https://cloud.codearch.pl/themes/_branding/codearch.png" alt="Codearch Logo">
+                {% endif %}
+            </a>
+            <div class="title-area">
+                <h1>{{ filename }}</h1>
+                <p>{{ s.hub_name }} | {{ 'embedded view' if is_embed else 'interactive viewport' }}</p>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a href="/api/lang/change/{% if current_lang == 'pl' %}en{% else %}pl{% endif %}" class="btn-back" style="display: flex; align-items: center; gap: 6px;">
+                🌐 {% if current_lang == 'pl' %}EN{% else %}PL{% endif %}
+            </a>
+        </div>
+    </header>
+    {% endif %}
+
+    <div class="viewer-container">
+        <!-- Floating View Mode Selector -->
+        <div class="view-mode-selector">
+            <button class="view-mode-btn {% if s.default_view_mode == 'clay' %}active{% endif %}" id="btn-mode-clay" onclick="window.setViewMode('clay')">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink: 0;">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                </svg>
+                <span>{{ t.viewer_clay }}</span>
+            </button>
+            <button class="view-mode-btn {% if s.default_view_mode == 'materials' %}active{% endif %}" id="btn-mode-materials" onclick="window.setViewMode('materials')">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink: 0;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    <path d="M2 12h20"></path>
+                </svg>
+                <span>{{ t.viewer_materials }}</span>
+            </button>
+            <button class="view-mode-btn {% if s.default_view_mode == 'xray' %}active{% endif %}" id="btn-mode-xray" onclick="window.setViewMode('xray')">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink: 0;">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"></path>
+                </svg>
+                <span>{{ t.viewer_xray }}</span>
+            </button>
+        </div>
+
+        <!-- Spinner -->
+        <div id="loader-spinner">
+            <div class="spinner"></div>
+            <div id="loader-text">{{ t.viewer_loading }} 0%</div>
+        </div>
+
+        <!-- Floating Comments Button -->
+        {% if comments_enabled %}
+        <div class="comments-toggle" onclick="toggleCommentsPanel()" title="{{ t.comments }}">
+            <svg viewBox="0 0 24 24">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" fill="none" stroke-width="2"></path>
+            </svg>
+        </div>
+
+        <!-- Sliding Comments Panel (Left) -->
+        <div class="comments-panel" id="comments-panel">
+            <button class="panel-close-btn" onclick="toggleCommentsPanel()">&times;</button>
+            <div class="panel-section">
+                <h3>{{ t.comm_title }}</h3>
+                <button class="btn-add-comment-mode" id="btn-comment-mode" onclick="toggleCommentMode()">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"></path>
+                    </svg>
+                    <span>{{ t.comm_add_btn }}</span>
+                </button>
+            </div>
+            
+            <div class="panel-section" style="flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0;">
+                <h3>{{ t.comm_list_title }}</h3>
+                <div class="comments-list" id="comments-list">
+                    <p style="font-size: 12px; color: var(--text-muted);">{{ t.comm_empty }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comments Overlay Container -->
+        <div class="comments-overlay-container" id="comments-overlay-container"></div>
+        {% endif %}
+
+        <!-- Codearch Watermark Branding -->
+        <div class="viewer-watermark" style="display: flex; align-items: center; gap: 8px;">
+            <span>{{ t.viewer_powered_by | safe }}</span>
+            <span style="color: rgba(255,255,255,0.15);">|</span>
+            <a href="#" onclick="openPrivacyModal(event)" style="color: var(--accent); opacity: 0.7; text-decoration: underline; font-weight: 700; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">{{ t.privacy_policy_title }}</a>
+        </div>
+
+        <!-- Floating Tree Button (Layers/Structure) -->
+        <div class="tree-toggle" onclick="toggleTreePanel()" title="{{ t.viewer_layer_structure }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+        </div>
+
+        <!-- Sliding Tree Panel (Right) -->
+        <div class="tree-panel" id="tree-panel">
+            <button class="panel-close-btn" onclick="toggleTreePanel()">&times;</button>
+            <div class="panel-section">
+                <h3>{{ t.viewer_elements }}</h3>
+                <div id="model-elements-tree" style="max-height: calc(100vh - 160px); overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
+                    <p style="font-size: 12px; color: var(--text-muted);">{{ t.viewer_loading_structure }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Settings Button -->
+        <div class="settings-toggle" onclick="toggleSettings()" title="{{ t.viewer_display_options }}">
+            <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+        </div>
+
+        <!-- Sliding Settings Drawer -->
+        <div class="settings-panel" id="settings-panel">
+            <button class="panel-close-btn" onclick="toggleSettings()">&times;</button>
+            <div class="panel-section">
+                <h3>{{ t.viewer_bg_color }}</h3>
+                <div class="color-grid">
+                    <div class="color-dot active" style="background-color: #ffffff;" onclick="changeBg('#ffffff', this)"></div>
+                    <div class="color-dot" style="background-color: #374151;" onclick="changeBg('#374151', this)"></div>
+                    <div class="color-dot" style="background-color: #0c0c10;" onclick="changeBg('#0c0c10', this)"></div>
+                    <div class="color-picker-wrapper" title="Własny kolor">
+                        <input type="color" id="bg-picker" value="#ffffff">
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>{{ t.viewer_sun_pos }}</h3>
+                <div class="range-group">
+                    <div class="range-label-row">
+                        <span>{{ t.viewer_sun_azimuth }}</span>
+                        <span class="range-val" id="sun-azimuth-val">120°</span>
+                    </div>
+                    <input type="range" id="sun-azimuth" min="0" max="360" step="2" value="120">
+                </div>
+                <div class="range-group">
+                    <div class="range-label-row">
+                        <span>{{ t.viewer_sun_elevation }}</span>
+                        <span class="range-val" id="sun-elevation-val">45°</span>
+                    </div>
+                    <input type="range" id="sun-elevation" min="5" max="85" step="1" value="45">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>{{ t.viewer_shadows }}</h3>
+                <div class="control-row">
+                    <label for="shadows-toggle">{{ t.viewer_shadows_toggle }}</label>
+                    <label class="switch">
+                        <input type="checkbox" id="shadows-toggle" {% if s.default_shadows == '1' %}checked{% endif %}>
+                        <span class="slider-round"></span>
+                    </label>
+                </div>
+                <div class="range-group" id="transparency-control" style="{% if s.default_shadows != '1' %}opacity: 0.4; pointer-events: none;{% endif %}">
+                    <div class="range-label-row">
+                        <span>{{ t.viewer_shadows_transparency }}</span>
+                        <span class="range-val" id="transparency-val">15%</span>
+                    </div>
+                    <input type="range" id="shadow-transparency" min="0" max="1" step="0.05" value="{{ s.default_shadow_transparency }}">
+                </div>
+                <div class="control-row" id="shadow-type-row" style="{% if s.default_shadows != '1' %}opacity: 0.4; pointer-events: none;{% endif %}">
+                    <label for="shadow-type-toggle">{{ t.viewer_shadows_soft }}</label>
+                    <label class="switch">
+                        <input type="checkbox" id="shadow-type-toggle" {% if s.default_shadows_soft == '1' %}checked{% endif %}>
+                        <span class="slider-round"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>{{ t.viewer_lighting }}</h3>
+                <div class="range-group">
+                    <div class="range-label-row">
+                        <span>{{ t.viewer_sun_intensity }}</span>
+                        <span class="range-val" id="sun-intensity-val">{{ s.default_sun_intensity }}</span>
+                    </div>
+                    <input type="range" id="sun-intensity" min="0" max="6" step="0.1" value="{{ s.default_sun_intensity }}">
+                </div>
+                <div class="range-group">
+                    <div class="range-label-row">
+                        <span>{{ t.viewer_ambient_light }}</span>
+                        <span class="range-val" id="ambient-intensity-val">{{ s.default_ambient_intensity }}</span>
+                    </div>
+                    <input type="range" id="ambient-intensity" min="0" max="2" step="0.05" value="{{ s.default_ambient_intensity }}">
+                </div>
+                <div class="range-group">
+                    <div class="range-label-row">
+                        <span>{{ 'Ekspozycja (Kamera)' if current_lang == 'pl' else 'Exposure (Camera)' }}</span>
+                        <span class="range-val" id="exposure-val">0.85</span>
+                    </div>
+                    <input type="range" id="exposure-slider" min="0.2" max="2.5" step="0.05" value="0.85">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>{{ t.viewer_camera_view }}</h3>
+                <div class="control-row">
+                    <label for="auto-rotate-toggle">{{ t.viewer_auto_rotate }}</label>
+                    <label class="switch">
+                        <input type="checkbox" id="auto-rotate-toggle" {% if s.default_auto_rotate == '1' %}checked{% endif %}>
+                        <span class="slider-round"></span>
+                    </label>
+                </div>
+                <div class="control-row">
+                    <label for="grid-toggle">{{ t.viewer_grid }}</label>
+                    <label class="switch">
+                        <input type="checkbox" id="grid-toggle">
+                        <span class="slider-round"></span>
+                    </label>
+                </div>
+                <button class="btn-reset" onclick="resetCameraView()">{{ t.viewer_center_view }}</button>
+            </div>
+        </div>
+
+        <div class="controls-info">
+            <p>🖱️ {{ t.viewer_controls_left }}</p>
+            <p>🖱️ {{ t.viewer_controls_right }}</p>
+            <p>🎡 {{ t.viewer_controls_wheel }}</p>
+        </div>
+
+        <!-- Render container -->
+        <div id="canvas-container"></div>
+    </div>
+
+    <!-- Privacy Policy Modal -->
+    <div id="privacy-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(8, 8, 12, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10000; display: none; justify-content: center; align-items: center; box-sizing: border-box; padding: 20px;">
+        <div style="background: rgba(18, 18, 24, 0.95); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 24px; max-width: 440px; width: 100%; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); position: relative; color: var(--text-color); font-family: 'Outfit', sans-serif; text-align: left;">
+            <button onclick="closePrivacyModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+                🛡️ {{ t.privacy_policy_title }}
+            </h3>
+            <div style="font-size: 13px; line-height: 1.6; color: var(--text-muted); display: flex; flex-direction: column; gap: 10px;">
+                {{ t.privacy_policy_text | safe }}
+            </div>
+            <button onclick="closePrivacyModal()" style="margin-top: 20px; width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                {{ 'Close' if current_lang == 'en' else 'Zamknij' }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Import Maps support for ES modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+
+        // Variables
+        let scene, camera, renderer, controls;
+        let model, gridHelper, axesHelper;
+        let dirLight, dirLightNoShadow, dirLightFill, ambientLight;
+        let modelCenter = new THREE.Vector3(0, 0, 0);
+        let modelRadius = 10;
+        let defaultCameraPos = new THREE.Vector3(15, 15, 15);
+
+        // View modes state variables
+        let pmremGenerator, envMap;
+        let currentViewMode = '{{ s.default_view_mode }}';
+        let clayMaterialOpaque, clayMaterialTransparent;
+        let xrayMaterialOpaque, xrayMaterialTransparent;
+        let savedBgColor = '#ffffff';
+
+        // Comments state
+        const filename = '{{ filename }}';
+        const isArchitect = {{ 'true' if is_architect else 'false' }};
+        const commentsEnabled = {{ 'true' if comments_enabled else 'false' }};
+        let comments = [];
+        let commentModeActive = false;
+        let activeCommentBubble = null;
+        let activeCommentId = null;
+        let newCommentTempPoint = null;
+
+        // Deletion Policies
+        const clientCanEditOwn = {{ 'true' if s.client_can_edit_own == '1' else 'false' }};
+        const clientCanDeleteOwn = {{ 'true' if s.client_can_delete_own == '1' else 'false' }};
+
+        // Password Protection helper functions
+        window.getApiUrl = function(basePath) {
+            const password = sessionStorage.getItem('model_password_' + filename);
+            if (password) {
+                const separator = basePath.includes('?') ? '&' : '?';
+                return basePath + separator + 'password=' + encodeURIComponent(password);
+            }
+            return basePath;
+        };
+
+        window.verifyStoredPassword = function(password) {
+            fetch(`/api/settings/${encodeURIComponent(filename)}/verify_password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ password: password })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Incorrect password');
+                return res.json();
+            })
+            .then(data => {
+                if (data.valid) {
+                    sessionStorage.setItem('model_password_' + filename, password);
+                    const overlay = document.getElementById('password-overlay');
+                    if (overlay) overlay.style.display = 'none';
+                    startApp();
+                }
+            })
+            .catch(err => {
+                console.error('Błąd automatycznej autoryzacji:', err);
+                sessionStorage.removeItem('model_password_' + filename);
+                const overlay = document.getElementById('password-overlay');
+                if (overlay) overlay.style.display = 'flex';
+            });
+        };
+
+        window.verifyModelPassword = function(e) {
+            e.preventDefault();
+            const input = document.getElementById('model-password-input');
+            const errorDiv = document.getElementById('password-error');
+            const password = input.value;
+            
+            errorDiv.style.display = 'none';
+            
+            fetch(`/api/settings/${encodeURIComponent(filename)}/verify_password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ password: password })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Incorrect password');
+                return res.json();
+            })
+            .then(data => {
+                if (data.valid) {
+                    sessionStorage.setItem('model_password_' + filename, password);
+                    const overlay = document.getElementById('password-overlay');
+                    if (overlay) overlay.style.display = 'none';
+                    startApp();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                errorDiv.style.display = 'block';
+                input.value = '';
+                input.focus();
+            });
+        };
+
+        function startApp() {
+            init();
+            animate();
+        }
+        window.startApp = startApp;
+
+        // JS translations helper
+        const i18n = {
+            comm_confirm_delete: `{{ t.comm_confirm_delete }}`,
+            comm_confirm_delete_reply: `{{ t.comm_confirm_delete_reply }}`,
+            comm_err_author: `{{ t.comm_err_author }}`,
+            comm_err_text: `{{ t.comm_err_text }}`,
+            comm_err_reply: `{{ t.comm_err_reply }}`,
+            viewer_loading: `{{ t.viewer_loading }}`,
+            comm_save: `{{ t.comm_save }}`,
+            comm_cancel: `{{ t.comm_cancel }}`,
+            comm_delete: `{{ t.comm_delete }}`,
+            comm_replies_count: `{{ t.comm_replies_count }}`,
+            comm_author_placeholder: `{{ t.comm_author_placeholder }}`,
+            comm_text_placeholder: `{{ t.comm_text_placeholder }}`,
+            comm_reply_placeholder: `{{ t.comm_reply_placeholder }}`,
+            comm_reply_btn: `{{ t.comm_reply_btn }}`,
+            comm_edit: `{{ 'Edytuj' if current_lang == 'pl' else 'Edit' }}`,
+            comm_close: `{{ 'Zamknij' if current_lang == 'pl' else 'Close' }}`,
+            comm_edit_title: `{{ 'Edytuj komentarz' if current_lang == 'pl' else 'Edit comment' }}`,
+            comm_err_save: `{{ 'Nie udało się zapisać' if current_lang == 'pl' else 'Save failed' }}`,
+            comm_err_delete: `{{ 'Nie udało się usunąć komentarza' if current_lang == 'pl' else 'Failed to delete comment' }}`
+        };
+
+        // Camera animation state variables
+        let isCameraAnimating = false;
+        let cameraAnimationStart = 0;
+        const cameraSourcePos = new THREE.Vector3();
+        const cameraDestPos = new THREE.Vector3();
+        const cameraSourceTarget = new THREE.Vector3();
+        const cameraDestTarget = new THREE.Vector3();
+        const cameraAnimationDuration = 1000;
+
+        // Pointer handlers state
+        let pointerStartX = 0;
+        let pointerStartY = 0;
+
+        // XSS protection
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        const container = document.getElementById('canvas-container');
+        const spinner = document.getElementById('loader-spinner');
+        const spinnerText = document.getElementById('loader-text');
+
+
+        function init() {
+            // 1. SCENE & CAMERA (Default background color is White #ffffff)
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xffffff);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.05, 10000);
+            camera.position.copy(defaultCameraPos);
+
+            // 2. RENDERER (Crisp, High Quality, No Blurry postprocess)
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = {{ 'true' if s.default_shadows == '1' else 'false' }};
+            renderer.shadowMap.type = {{ 'THREE.PCFSoftShadowMap' if s.default_shadows_soft == '1' else 'THREE.PCFShadowMap' }};
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.10; // default exposure for clay mode
+            container.appendChild(renderer.domElement);
+
+            // Initialize environment reflections using PMREM and RoomEnvironment
+            pmremGenerator = new THREE.PMREMGenerator(renderer);
+            pmremGenerator.compileEquirectangularShader();
+            const envScene = new RoomEnvironment(renderer);
+            envMap = pmremGenerator.fromScene(envScene).texture;
+            envScene.dispose();
+            
+            // Set environment reflections by default
+            scene.environment = envMap;
+
+            // Initialize clay materials (used in Conceptual / Clay mode)
+            clayMaterialOpaque = new THREE.MeshStandardMaterial({
+                color: 0xf5f5f7,
+                roughness: 0.6,
+                metalness: 0.1,
+                shadowSide: THREE.DoubleSide
+            });
+            clayMaterialTransparent = new THREE.MeshStandardMaterial({
+                color: 0xf5f5f7,
+                roughness: 0.6,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.3,
+                shadowSide: THREE.DoubleSide
+            });
+
+
+
+            // Initialize X-Ray materials (transparent glow in theme accent color)
+            let xrayColor = 0x06b6d4; // Cool Cyan fallback
+            try {
+                const accentStr = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+                if (accentStr.startsWith('#')) {
+                    xrayColor = parseInt(accentStr.substring(1), 16);
+                }
+            } catch (e) {}
+
+            xrayMaterialOpaque = new THREE.MeshBasicMaterial({
+                color: xrayColor,
+                transparent: true,
+                opacity: 0.18,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+            xrayMaterialTransparent = new THREE.MeshBasicMaterial({
+                color: xrayColor,
+                transparent: true,
+                opacity: 0.06,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+
+            // 3. CONTROLS (Zoom close, limit distances)
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 0.05; // Infinite close zoom
+            controls.maxDistance = 8000;
+            controls.target.copy(modelCenter);
+
+            // 4. LIGHTS (Hemisphere + Dual directional lights + Sky fill)
+            // HemisphereLight simulates sky dome (white from above) and ground bounce (warm grey from below)
+            ambientLight = new THREE.HemisphereLight(0xffffff, 0x888888, {{ s.default_ambient_intensity }});
+            scene.add(ambientLight);
+
+            // Main light that casts shadows
+            dirLight = new THREE.DirectionalLight(0xffffff, {{ s.default_sun_intensity }});
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 4096;
+            dirLight.shadow.mapSize.height = 4096;
+            dirLight.shadow.bias = -0.0005;
+            scene.add(dirLight);
+
+            // Secondary light that does NOT cast shadows (adds light back into shadow regions)
+            dirLightNoShadow = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLightNoShadow.castShadow = false;
+            scene.add(dirLightNoShadow);
+
+            // Fill light from the opposite direction to illuminate self-shadowed walls (no shadows)
+            // Color is a very light cool blue-grey to simulate sky reflection
+            dirLightFill = new THREE.DirectionalLight(0xeaf2f8, 0.4);
+            dirLightFill.castShadow = false;
+            scene.add(dirLightFill);
+
+            // 5. HELPERS (Initially hidden)
+            gridHelper = new THREE.GridHelper(100, 100, 0x6366f1, 0x2e2e38);
+            gridHelper.position.y = -0.01;
+            gridHelper.visible = false;
+            scene.add(gridHelper);
+
+            axesHelper = new THREE.AxesHelper(10);
+            axesHelper.visible = false;
+            scene.add(axesHelper);
+
+            // 6. LOADER
+            const loader = new GLTFLoader();
+            loader.load(
+                window.getApiUrl('/raw/{{ filename }}'),
+                function (gltf) {
+                    model = gltf.scene;
+
+                    // Automatically enable shadows for all meshes and fix black shadow surfaces
+                    model.traverse(function (node) {
+                        if (node.isMesh) {
+                            node.castShadow = true;
+                            node.receiveShadow = true;
+                            if (node.material) {
+                                node.material.shadowSide = THREE.DoubleSide;
+
+                                // Fix CAD materials looking pitch black in shadow due to incorrect metalness settings
+                                if (node.material.metalness !== undefined) {
+                                    const matName = (node.material.name || '').toLowerCase();
+                                    const isMetal = matName.includes('metal') || matName.includes('steel') || 
+                                                    matName.includes('chrome') || matName.includes('gold') || 
+                                                    matName.includes('iron') || matName.includes('aluminium') || 
+                                                    matName.includes('alu') || matName.includes('brass') || 
+                                                    matName.includes('miedź') || matName.includes('stal') || 
+                                                    matName.includes('srebro');
+                                    if (!isMetal) {
+                                        node.material.metalness = 0.0;
+                                    }
+                                }
+
+                                // Ensure standard/physical materials have a reasonable roughness so they reflect diffuse light correctly
+                                if (node.material.roughness !== undefined) {
+                                    node.material.roughness = Math.max(node.material.roughness, 0.4);
+                                }
+
+                                // Store original material for view modes
+                                node.userData.originalMaterial = node.material;
+                            }
+                        }
+                    });
+
+                    scene.add(model);
+
+                    // Compute model bounding box to adjust camera frustum and position
+                    const box = new THREE.Box3().setFromObject(model);
+                    box.getCenter(modelCenter);
+                    const sphere = new THREE.Sphere();
+                    box.getBoundingSphere(sphere);
+                    modelRadius = sphere.radius || 10;
+
+
+
+                    // Dynamically size the shadow map camera to cover the whole model
+                    const d = modelRadius * 2;
+                    dirLight.shadow.camera.left = -modelRadius * 1.5;
+                    dirLight.shadow.camera.right = modelRadius * 1.5;
+                    dirLight.shadow.camera.top = modelRadius * 1.5;
+                    dirLight.shadow.camera.bottom = -modelRadius * 1.5;
+                    dirLight.shadow.camera.near = 0.1;
+                    dirLight.shadow.camera.far = d * 6;
+                    dirLight.shadow.camera.updateProjectionMatrix();
+
+                    // Adjust helper sizing
+                    scene.remove(gridHelper);
+                    gridHelper = new THREE.GridHelper(modelRadius * 4, 100, 0x6366f1, 0xd1d5db);
+                    gridHelper.position.copy(modelCenter);
+                    gridHelper.position.y = box.min.y - 0.02;
+                    gridHelper.visible = document.getElementById('grid-toggle').checked;
+                    scene.add(gridHelper);
+
+                    // Reposition camera based on model size
+                    controls.target.copy(modelCenter);
+                    
+                    defaultCameraPos.set(
+                        modelCenter.x + modelRadius * 1.8,
+                        modelCenter.y + modelRadius * 1.5,
+                        modelCenter.z + modelRadius * 1.8
+                    );
+                    camera.position.copy(defaultCameraPos);
+                    controls.update();
+
+                    // Update sun position and intensities
+                    updateSun();
+                    updateLightIntensities();
+
+                    // Build element visibility tree
+                    window.buildModelTree(model);
+
+                    // Load comments from DB
+                    if (commentsEnabled) {
+                        window.loadComments();
+                    }
+
+                    // Apply initial view mode
+                    applyViewMode(currentViewMode);
+
+                    // Hide loading spinner
+                    spinner.style.opacity = 0;
+                    setTimeout(() => spinner.style.display = 'none', 500);
+                },
+                function (xhr) {
+                    if (xhr.total > 0) {
+                        const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                        spinnerText.textContent = `${i18n.viewer_loading} ${percent}%`;
+                    }
+                },
+                function (error) {
+                    console.error('Błąd wczytywania modelu GLTF/GLB:', error);
+                    spinnerText.textContent = 'Błąd podczas wczytywania pliku!';
+                    spinnerText.style.color = '#ef4444';
+                }
+            );
+
+            // Initialize Settings UI labels
+            document.getElementById('transparency-val').textContent = Math.round(parseFloat(document.getElementById('shadow-transparency').value) * 100) + '%';
+            document.getElementById('sun-intensity-val').textContent = parseFloat(document.getElementById('sun-intensity').value).toFixed(1);
+            document.getElementById('ambient-intensity-val').textContent = parseFloat(document.getElementById('ambient-intensity').value).toFixed(2);
+            
+            // Set initial exposure slider value
+            let initialExposure = 1.10;
+            if (currentViewMode === 'materials') initialExposure = 0.60;
+            else if (currentViewMode === 'clay') initialExposure = 1.10;
+            else if (currentViewMode === 'xray') initialExposure = 0.35;
+            document.getElementById('exposure-slider').value = initialExposure;
+            document.getElementById('exposure-val').textContent = initialExposure.toFixed(2);
+            
+            // Set auto-rotate based on checkbox
+            controls.autoRotate = document.getElementById('auto-rotate-toggle').checked;
+            controls.autoRotateSpeed = 1.0;
+
+            // 7. EVENT LISTENERS
+            window.addEventListener('resize', onWindowResize);
+            setupUIListeners();
+        }
+
+        function onWindowResize() {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            updateCameraAnimation(); // Smooth camera flying to comments
+            
+            // Auto rotate camera if enabled
+            if (document.getElementById('auto-rotate-toggle').checked) {
+                controls.autoRotate = true;
+                controls.autoRotateSpeed = 1.0;
+            } else {
+                controls.autoRotate = false;
+            }
+
+            controls.update();
+            
+            renderer.render(scene, camera);
+
+            if (commentsEnabled) {
+                window.updateCommentPositions(); // Update HTML overlay bubble/pin coordinates on screen
+            }
+        }
+
+        // Logic to calculate sun direction from azimuth and elevation
+        function updateSun() {
+            if (!dirLight) return;
+
+            const azimuth = parseFloat(document.getElementById('sun-azimuth').value);
+            const elevation = parseFloat(document.getElementById('sun-elevation').value);
+
+            // Convert to radians
+            const azimuthRad = (azimuth - 180) * Math.PI / 180;
+            const elevationRad = elevation * Math.PI / 180;
+
+            // Calculate directional light position on the hemisphere around the model center
+            const distance = modelRadius * 3;
+            const x = modelCenter.x + distance * Math.cos(elevationRad) * Math.sin(azimuthRad);
+            const y = modelCenter.y + distance * Math.sin(elevationRad);
+            const z = modelCenter.z + distance * Math.cos(elevationRad) * Math.cos(azimuthRad);
+
+            dirLight.position.set(x, y, z);
+            dirLightNoShadow.position.set(x, y, z);
+            
+            // Position the fill light opposite to the sun horizontally (-x, y, -z)
+            dirLightFill.position.set(-x, y, -z);
+            
+            // Position the shadow target at the center of our model
+            dirLight.target.position.copy(modelCenter);
+            dirLight.target.updateMatrixWorld();
+            dirLightNoShadow.target.position.copy(modelCenter);
+            dirLightNoShadow.target.updateMatrixWorld();
+            dirLightFill.target.position.copy(modelCenter);
+            dirLightFill.target.updateMatrixWorld();
+
+            // Update labels
+            document.getElementById('sun-azimuth-val').textContent = azimuth + '°';
+            document.getElementById('sun-elevation-val').textContent = elevation + '°';
+        }
+
+        // Split sun light intensity between shadow casting light and non-shadow casting light
+        // to control shadow transparency.
+        function updateLightIntensities() {
+            if (!dirLight || !dirLightNoShadow || !dirLightFill) return;
+
+            const intensity = parseFloat(document.getElementById('sun-intensity').value);
+            const transparency = parseFloat(document.getElementById('shadow-transparency').value);
+
+            document.getElementById('sun-intensity-val').textContent = intensity.toFixed(1);
+            document.getElementById('transparency-val').textContent = Math.round(transparency * 100) + '%';
+
+
+
+            // Ensure lights are visible in non-arctic modes
+            dirLight.visible = true;
+            dirLightNoShadow.visible = true;
+            dirLightFill.visible = true;
+
+            // Normal light calculations
+            if (document.getElementById('shadows-toggle').checked) {
+                dirLight.intensity = intensity * (1.0 - transparency);
+                // Soften duplicate light to avoid double-lighting overexposure
+                dirLightNoShadow.intensity = intensity * transparency * 0.35;
+                dirLight.castShadow = true;
+            } else {
+                dirLight.intensity = 0;
+                dirLightNoShadow.intensity = intensity * 0.7;
+                dirLight.castShadow = false;
+            }
+
+            // Fill light is softer to prevent color saturation blowout
+            dirLightFill.intensity = intensity * 0.08;
+        }
+
+        function setupUIListeners() {
+            // Sun Position Sliders
+            document.getElementById('sun-azimuth').addEventListener('input', updateSun);
+            document.getElementById('sun-elevation').addEventListener('input', updateSun);
+
+            // Light Intensity and Transparency sliders
+            document.getElementById('sun-intensity').addEventListener('input', updateLightIntensities);
+            document.getElementById('shadow-transparency').addEventListener('input', updateLightIntensities);
+
+            document.getElementById('ambient-intensity').addEventListener('input', (e) => {
+                ambientLight.intensity = parseFloat(e.target.value);
+                document.getElementById('ambient-intensity-val').textContent = parseFloat(e.target.value).toFixed(2);
+            });
+
+            document.getElementById('exposure-slider').addEventListener('input', (e) => {
+                const expVal = parseFloat(e.target.value);
+                if (renderer) renderer.toneMappingExposure = expVal;
+                document.getElementById('exposure-val').textContent = expVal.toFixed(2);
+            });
+
+            // Shadows Toggle
+            const transparencyCtrl = document.getElementById('transparency-control');
+            const typeRow = document.getElementById('shadow-type-row');
+            document.getElementById('shadows-toggle').addEventListener('change', (e) => {
+                updateLightIntensities();
+                if (e.target.checked) {
+                    transparencyCtrl.style.opacity = '1';
+                    transparencyCtrl.style.pointerEvents = 'auto';
+                    typeRow.style.opacity = '1';
+                    typeRow.style.pointerEvents = 'auto';
+                } else {
+                    transparencyCtrl.style.opacity = '0.4';
+                    transparencyCtrl.style.pointerEvents = 'none';
+                    typeRow.style.opacity = '0.4';
+                    typeRow.style.pointerEvents = 'none';
+                }
+            });
+
+            // Shadows Softness Toggle (toggles between sharp basic shadow and soft PCF)
+            document.getElementById('shadow-type-toggle').addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                } else {
+                    renderer.shadowMap.type = THREE.BasicShadowMap; // Very sharp architectural shadows
+                }
+                // Recompile shaders on materials to apply shadow map change
+                scene.traverse(node => {
+                    if (node.isMesh && node.material) {
+                        node.material.needsUpdate = true;
+                    }
+                });
+            });
+
+            // Grid helper toggle
+            document.getElementById('grid-toggle').addEventListener('change', (e) => {
+                if (gridHelper) gridHelper.visible = e.target.checked;
+            });
+
+            // Background color custom picker
+            document.getElementById('bg-picker').addEventListener('input', (e) => {
+                scene.background.set(e.target.value);
+                document.body.style.backgroundColor = e.target.value;
+                document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('active'));
+            });
+
+            // Canvas container pointer events for comments placement (attaches directly to canvas to bypass OrbitControls suppression)
+            if (commentsEnabled) {
+                renderer.domElement.addEventListener('pointerdown', onPointerDown);
+                renderer.domElement.addEventListener('pointerup', onPointerUp);
+            }
+        }
+
+        // Global functions (exposed to HTML click actions)
+        window.changeBg = function(color, element) {
+            scene.background.set(color);
+            document.body.style.backgroundColor = color;
+            document.getElementById('bg-picker').value = color;
+
+            document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('active'));
+            if (element) element.classList.add('active');
+        };
+
+        window.resetCameraView = function() {
+            if (controls) {
+                controls.target.copy(modelCenter);
+                camera.position.copy(defaultCameraPos);
+                controls.update();
+            }
+        };
+
+        window.toggleSettings = function() {
+            document.getElementById('settings-panel').classList.toggle('open');
+            const commentsPanel = document.getElementById('comments-panel');
+            if (commentsPanel && commentsPanel.classList.contains('open')) {
+                commentsPanel.classList.remove('open');
+            }
+            const treePanel = document.getElementById('tree-panel');
+            if (treePanel && treePanel.classList.contains('open')) {
+                treePanel.classList.remove('open');
+            }
+        };
+
+        window.toggleTreePanel = function() {
+            document.getElementById('tree-panel').classList.toggle('open');
+            const settings = document.getElementById('settings-panel');
+            if (settings && settings.classList.contains('open')) {
+                settings.classList.remove('open');
+            }
+            const commentsPanel = document.getElementById('comments-panel');
+            if (commentsPanel && commentsPanel.classList.contains('open')) {
+                commentsPanel.classList.remove('open');
+            }
+        };
+
+
+        window.flyTo = function(destPos, destTarget) {
+            cameraSourcePos.copy(camera.position);
+            cameraDestPos.copy(destPos);
+            cameraSourceTarget.copy(controls.target);
+            cameraDestTarget.copy(destTarget);
+            cameraAnimationStart = performance.now();
+            isCameraAnimating = true;
+            controls.enabled = false;
+        };
+
+        function updateCameraAnimation() {
+            if (!isCameraAnimating) return;
+            const now = performance.now();
+            const elapsed = now - cameraAnimationStart;
+            const t = Math.min(elapsed / cameraAnimationDuration, 1);
+            const ease = 1 - Math.pow(1 - t, 3); // Cubic easing out
+            camera.position.lerpVectors(cameraSourcePos, cameraDestPos, ease);
+            controls.target.lerpVectors(cameraSourceTarget, cameraDestTarget, ease);
+            if (t >= 1) {
+                isCameraAnimating = false;
+                controls.enabled = true;
+            }
+        }
+
+        function onPointerDown(e) {
+            pointerStartX = e.clientX;
+            pointerStartY = e.clientY;
+        }
+
+        function onPointerUp(e) {
+            // Check that it's a click, not drag
+            const diffX = Math.abs(e.clientX - pointerStartX);
+            const diffY = Math.abs(e.clientY - pointerStartY);
+            if (diffX > 5 || diffY > 5) return;
+            
+            if (!commentModeActive) {
+                // If the user clicked on the model canvas, close the active comment bubble
+                window.closeActiveBubble();
+                return;
+            }
+            
+            const rect = renderer.domElement.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2(x, y);
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObject(model, true);
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                window.openNewCommentForm(point);
+            }
+        }
+
+        // Comments panel & Comment Mode toggling
+        window.toggleCommentsPanel = function() {
+            if (!commentsEnabled) return;
+            document.getElementById('comments-panel').classList.toggle('open');
+            const settings = document.getElementById('settings-panel');
+            if (settings && settings.classList.contains('open')) {
+                settings.classList.remove('open');
+            }
+            const treePanel = document.getElementById('tree-panel');
+            if (treePanel && treePanel.classList.contains('open')) {
+                treePanel.classList.remove('open');
+            }
+        };
+
+        window.toggleCommentMode = function() {
+            if (!commentsEnabled) return;
+            commentModeActive = !commentModeActive;
+            const btn = document.getElementById('btn-comment-mode');
+            if (!btn) return;
+            
+            if (commentModeActive) {
+                btn.classList.add('active');
+                btn.querySelector('span').textContent = (i18n.comm_cancel === 'Cancel') ? 'Cancel adding' : 'Anuluj dodawanie';
+                btn.querySelector('svg').innerHTML = '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>';
+                container.style.cursor = 'crosshair';
+                window.closeActiveBubble();
+                
+                // Automatically close the comments panel so the user can click on the 3D model
+                const commentsPanel = document.getElementById('comments-panel');
+                if (commentsPanel && commentsPanel.classList.contains('open')) {
+                    commentsPanel.classList.remove('open');
+                }
+            } else {
+                btn.classList.remove('active');
+                btn.querySelector('span').textContent = i18n.comm_add_btn;
+                btn.querySelector('svg').innerHTML = '<path d="M12 5v14M5 12h14"></path>';
+                container.style.cursor = 'default';
+            }
+        };
+
+        // Comments AJAX operations
+        window.loadComments = function() {
+            if (!commentsEnabled) return;
+            fetch(window.getApiUrl(`/api/comments/${encodeURIComponent(filename)}`))
+            .then(res => {
+                if (!res.ok) throw new Error('Błąd ładowania komentarzy');
+                return res.json();
+            })
+            .then(data => {
+                comments = data;
+                renderCommentsList();
+                renderCommentPins();
+            })
+            .catch(err => {
+                console.error('Błąd pobierania komentarzy:', err);
+            });
+        };
+
+        window.renderCommentsList = function() {
+            const listEl = document.getElementById('comments-list');
+            if (!listEl) return;
+            
+            if (comments.length === 0) {
+                listEl.innerHTML = `<p style="font-size: 13px; color: var(--text-muted);">${i18n.comm_empty}</p>`;
+                return;
+            }
+            
+            listEl.innerHTML = '';
+            comments.forEach((c, idx) => {
+                const item = document.createElement('div');
+                item.className = 'comment-item';
+                
+                const authorClass = c.author_type === 'architect' ? 'architect-type' : 'client-type';
+                const replyCount = (c.replies && c.replies.length > 0) ? ` (${c.replies.length} ${i18n.comm_replies_count})` : '';
+                
+                // Build chat-style replies
+                let repliesHtml = '';
+                if (c.replies && c.replies.length > 0) {
+                    repliesHtml = '<div class="comment-item-replies">';
+                    // Original comment as first message
+                    const origMsgClass = c.author_type === 'architect' ? 'architect-msg' : 'client-msg';
+                    const origAuthorClass = c.author_type === 'architect' ? 'architect-type' : 'client-type';
+                    repliesHtml += `<div class="chat-msg ${origMsgClass}"><div class="chat-msg-author ${origAuthorClass}">${escapeHtml(c.author_name)}</div>${escapeHtml(c.text)}</div>`;
+                    c.replies.forEach(r => {
+                        const msgClass = r.author_type === 'architect' ? 'architect-msg' : 'client-msg';
+                        const rAuthorClass = r.author_type === 'architect' ? 'architect-type' : 'client-type';
+                        repliesHtml += `<div class="chat-msg ${msgClass}"><div class="chat-msg-author ${rAuthorClass}">${escapeHtml(r.author_name)}</div>${escapeHtml(r.text)}</div>`;
+                    });
+                    repliesHtml += '</div>';
+                }
+                
+                item.innerHTML = `
+                    <div class="comment-item-header">
+                        <span class="comment-item-author ${authorClass}">${idx + 1}. ${escapeHtml(c.author_name)}${replyCount}</span>
+                        <span class="comment-item-date">${c.created_at.split(' ')[1] || c.created_at}</span>
+                    </div>
+                    <div class="comment-item-text">${escapeHtml(c.text)}</div>
+                    ${repliesHtml}
+                `;
+                
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    if (c.replies && c.replies.length > 0) {
+                        item.classList.toggle('expanded');
+                    }
+                    window.openCommentBubble(c.id);
+                };
+                listEl.appendChild(item);
+            });
+        };
+
+        window.renderCommentPins = function() {
+            const overlay = document.getElementById('comments-overlay-container');
+            if (!overlay) return;
+            
+            const newForm = document.getElementById('new-comment-bubble');
+            overlay.innerHTML = '';
+            if (newForm) {
+                overlay.appendChild(newForm);
+            }
+            
+            comments.forEach((c, idx) => {
+                const pin = document.createElement('div');
+                pin.id = `comment-pin-${c.id}`;
+                pin.className = `comment-pin ${c.has_both_parties ? 'mixed' : c.author_type}`;
+                pin.textContent = idx + 1;
+                pin.onclick = (e) => {
+                    e.stopPropagation();
+                    window.openCommentBubble(c.id);
+                };
+                overlay.appendChild(pin);
+            });
+        };
+
+        window.updateCommentPositions = function() {
+            if (!commentsEnabled || !comments || comments.length === 0) return;
+            
+            const isMobile = window.innerWidth <= 640;
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            const halfWidth = containerWidth / 2;
+            const halfHeight = containerHeight / 2;
+            
+            const tempV = new THREE.Vector3();
+            
+            comments.forEach(c => {
+                const pinEl = document.getElementById(`comment-pin-${c.id}`);
+                if (!pinEl) return;
+                
+                tempV.set(c.x, c.y, c.z);
+                tempV.project(camera);
+                
+                if (tempV.z > 1) {
+                    pinEl.style.display = 'none';
+                    const bubbleEl = document.getElementById(`comment-bubble-${c.id}`);
+                    if (bubbleEl) bubbleEl.style.display = 'none';
+                    return;
+                }
+                
+                pinEl.style.display = '';
+                const x = (tempV.x * halfWidth) + halfWidth;
+                const y = -(tempV.y * halfHeight) + halfHeight;
+                
+                pinEl.style.left = `${x}px`;
+                pinEl.style.top = `${y}px`;
+                
+                const bubbleEl = document.getElementById(`comment-bubble-${c.id}`);
+                if (bubbleEl) {
+                    if (isMobile) {
+                        bubbleEl.style.display = '';
+                        bubbleEl.style.left = '';
+                        bubbleEl.style.top = '';
+                        bubbleEl.style.transform = '';
+                    } else {
+                        bubbleEl.style.display = '';
+                        
+                        // Reset CSS translate transform so we place left/top exactly
+                        bubbleEl.style.transform = 'none';
+                        
+                        const bubbleWidth = bubbleEl.offsetWidth || 320;
+                        const bubbleHeight = bubbleEl.offsetHeight || 200;
+                        
+                        // Keep the bubble 10px inside the screen bounds
+                        const left = Math.max(10, Math.min(containerWidth - bubbleWidth - 10, x - (bubbleWidth / 2)));
+                        const top = Math.max(10, Math.min(containerHeight - bubbleHeight - 10, y - bubbleHeight - 20));
+                        
+                        bubbleEl.style.left = `${left}px`;
+                        bubbleEl.style.top = `${top}px`;
+                    }
+                }
+            });
+            
+            if (newCommentTempPoint) {
+                const formEl = document.getElementById('new-comment-bubble');
+                if (formEl) {
+                    tempV.copy(newCommentTempPoint);
+                    tempV.project(camera);
+                    if (tempV.z > 1) {
+                        formEl.style.display = 'none';
+                    } else {
+                        if (isMobile) {
+                            formEl.style.display = '';
+                            formEl.style.left = '';
+                            formEl.style.top = '';
+                            formEl.style.transform = '';
+                        } else {
+                            formEl.style.display = '';
+                            
+                            // Reset CSS translate transform so we place left/top exactly
+                            formEl.style.transform = 'none';
+                            
+                            const x = (tempV.x * halfWidth) + halfWidth;
+                            const y = -(tempV.y * halfHeight) + halfHeight;
+                            
+                            const formWidth = formEl.offsetWidth || 320;
+                            const formHeight = formEl.offsetHeight || 200;
+                            
+                            // Keep the new comment form 10px inside the screen bounds
+                            const left = Math.max(10, Math.min(containerWidth - formWidth - 10, x - (formWidth / 2)));
+                            const top = Math.max(10, Math.min(containerHeight - formHeight - 10, y - formHeight - 20));
+                            
+                            formEl.style.left = `${left}px`;
+                            formEl.style.top = `${top}px`;
+                        }
+                    }
+                }
+            }
+        };
+
+        window.openCommentBubble = function(commentId) {
+            window.closeActiveBubble();
+            activeCommentId = commentId;
+            const c = comments.find(item => item.id === commentId);
+            if (!c) return;
+            
+            flyTo(
+                new THREE.Vector3(c.camera.x, c.camera.y, c.camera.z),
+                new THREE.Vector3(c.target.x, c.target.y, c.target.z)
+            );
+            
+            const overlay = document.getElementById('comments-overlay-container');
+            if (!overlay) return;
+            
+            const bubble = document.createElement('div');
+            bubble.id = `comment-bubble-${c.id}`;
+            bubble.className = `comment-bubble ${c.author_type}-bubble`;
+            
+            const isAuthor = (c.author_type === 'architect' && isArchitect) || (c.author_type === 'client' && !isArchitect);
+            const canDelete = isArchitect || (isAuthor && clientCanDeleteOwn);
+            const canEdit = isAuthor && clientCanEditOwn;
+            
+            const authorClass = c.author_type === 'architect' ? 'architect-type' : 'client-type';
+            const authorLabel = c.author_type === 'architect' ? '{{ s.persona_admin }}' : '{{ s.persona_viewer }}';
+            
+            // Build replies HTML
+            let repliesHtml = '';
+            if (c.replies && c.replies.length > 0) {
+                repliesHtml = '<div class="bubble-replies">';
+                c.replies.forEach(r => {
+                    const rClass = r.author_type === 'architect' ? 'architect-type' : 'client-type';
+                    const isReplyAuthor = (r.author_type === 'architect' && isArchitect) || (r.author_type === 'client' && !isArchitect);
+                    const canDeleteReply = isArchitect || (isReplyAuthor && clientCanDeleteOwn);
+                    repliesHtml += `
+                        <div class="bubble-reply">
+                            <div class="reply-header">
+                                <span class="bubble-author ${rClass}">${escapeHtml(r.author_name)}</span>
+                                <span>${r.created_at.split(' ')[1] || r.created_at}</span>
+                                ${canDeleteReply ? `<button class="reply-delete-btn" onclick="window.deleteReply(${c.id}, ${r.id})" title="Usuń odpowiedź">×</button>` : ''}
+                            </div>
+                            <div class="reply-text">${escapeHtml(r.text)}</div>
+                        </div>`;
+                });
+                repliesHtml += '</div>';
+            }
+            
+            bubble.innerHTML = `
+                <div class="bubble-header">
+                    <span class="bubble-author ${authorClass}">${escapeHtml(c.author_name)} (${authorLabel})</span>
+                    <span class="bubble-date">${c.created_at}</span>
+                </div>
+                <div class="bubble-text">${escapeHtml(c.text)}</div>
+                ${repliesHtml}
+                <div class="bubble-reply-form">
+                    <input type="text" id="reply-author-${c.id}" class="bubble-input" placeholder="${i18n.comm_author_placeholder}" required>
+                    <textarea id="reply-text-${c.id}" class="bubble-textarea" placeholder="${i18n.comm_reply_placeholder}" style="height: 40px;" required></textarea>
+                    <button class="bubble-btn bubble-btn-save" onclick="window.saveReply(${c.id})" style="align-self: flex-end;">${i18n.comm_reply_btn}</button>
+                </div>
+                <div class="bubble-buttons">
+                    ${canEdit ? `<button class="bubble-btn bubble-btn-save" style="background: rgba(255,255,255,0.05); color: var(--text-color);" onclick="window.startEditComment(${c.id})">${i18n.comm_edit}</button>` : ''}
+                    ${canDelete ? `<button class="bubble-btn bubble-btn-delete" onclick="window.deleteComment(${c.id})">${i18n.comm_delete}</button>` : ''}
+                    <button class="bubble-btn bubble-btn-cancel" onclick="window.closeActiveBubble()">${i18n.comm_close}</button>
+                </div>
+            `;
+            
+            overlay.appendChild(bubble);
+            // Set reply author value programmatically to prevent XSS
+            const replyAuthorInput = document.getElementById(`reply-author-${c.id}`);
+            if (replyAuthorInput) replyAuthorInput.value = isArchitect ? '{{ s.persona_admin }}' : '{{ s.persona_viewer }}';
+            activeCommentBubble = bubble;
+            window.updateCommentPositions();
+        };
+
+        window.startEditComment = function(commentId) {
+            const c = comments.find(item => item.id === commentId);
+            if (!c) return;
+            
+            const bubble = document.getElementById(`comment-bubble-${commentId}`);
+            if (!bubble) return;
+            
+            bubble.innerHTML = `
+                <div class="bubble-header">
+                    <span class="bubble-author ${c.author_type === 'architect' ? 'architect-type' : 'client-type'}">${i18n.comm_edit_title}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <input type="text" id="edit-comment-author-${c.id}" class="bubble-input" placeholder="${i18n.comm_author_placeholder}" required>
+                    <textarea id="edit-comment-text-${c.id}" class="bubble-textarea" placeholder="${i18n.comm_text_placeholder}" required></textarea>
+                </div>
+                <div class="bubble-buttons">
+                    <button class="bubble-btn bubble-btn-save" onclick="window.saveEditComment(${c.id})">${i18n.comm_save}</button>
+                    <button class="bubble-btn bubble-btn-cancel" onclick="window.openCommentBubble(${c.id})">${i18n.comm_cancel}</button>
+                </div>
+            `;
+            // Set values programmatically to prevent XSS in attributes
+            document.getElementById(`edit-comment-author-${c.id}`).value = c.author_name;
+            document.getElementById(`edit-comment-text-${c.id}`).value = c.text;
+        };
+
+        window.saveEditComment = function(commentId) {
+            const textInput = document.getElementById(`edit-comment-text-${commentId}`);
+            const authorInput = document.getElementById(`edit-comment-author-${commentId}`);
+            if (!textInput || !authorInput) return;
+            
+            const text = textInput.value.trim();
+            const author = authorInput.value.trim();
+            
+            if (!text) {
+                alert(i18n.comm_err_text);
+                return;
+            }
+            if (!author) {
+                alert(i18n.comm_err_author);
+                return;
+            }
+            
+            fetch(window.getApiUrl(`/api/comments/${encodeURIComponent(filename)}/${commentId}`), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, author_name: author })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error(i18n.comm_err_save);
+                window.loadComments();
+            })
+            .catch(err => {
+                console.error(err);
+                alert(i18n.comm_err_save);
+            });
+        };
+
+        window.openNewCommentForm = function(point) {
+            window.closeActiveBubble();
+            newCommentTempPoint = point;
+            
+            const overlay = document.getElementById('comments-overlay-container');
+            if (!overlay) return;
+            
+            const bubble = document.createElement('div');
+            bubble.id = 'new-comment-bubble';
+            bubble.className = `comment-bubble ${isArchitect ? 'architect-bubble' : 'client-bubble'}`;
+            
+            const defaultAuthor = isArchitect ? '{{ s.persona_admin }}' : '{{ s.persona_viewer }}';
+            
+            bubble.innerHTML = `
+                <div class="bubble-header">
+                    <span class="bubble-author ${isArchitect ? 'architect-type' : 'client-type'}">${'{{ current_lang }}' === 'pl' ? 'Nowy komentarz' : 'New comment'}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <input type="text" id="new-comment-author" class="bubble-input" value="${defaultAuthor}" placeholder="${i18n.comm_author_placeholder}" required>
+                    <textarea id="new-comment-text" class="bubble-textarea" placeholder="${i18n.comm_text_placeholder}" required></textarea>
+                </div>
+                <div class="bubble-buttons">
+                    <button class="bubble-btn bubble-btn-save" onclick="window.saveNewComment()">${i18n.comm_save}</button>
+                    <button class="bubble-btn bubble-btn-cancel" onclick="window.closeActiveBubble()">${i18n.comm_cancel}</button>
+                </div>
+            `;
+            
+            overlay.appendChild(bubble);
+            activeCommentBubble = bubble;
+            
+            // Set position immediately
+            const tempV = new THREE.Vector3();
+            tempV.copy(point);
+            tempV.project(camera);
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
+            const sx = (tempV.x * cw / 2) + cw / 2;
+            const sy = -(tempV.y * ch / 2) + ch / 2;
+            bubble.style.left = `${sx}px`;
+            bubble.style.top = `${sy}px`;
+            
+            window.updateCommentPositions();
+            
+            setTimeout(() => {
+                const textEl = document.getElementById('new-comment-text');
+                if (textEl) textEl.focus();
+            }, 50);
+        };
+
+        window.saveNewComment = function() {
+            if (!newCommentTempPoint) return;
+            
+            const textInput = document.getElementById('new-comment-text');
+            const authorInput = document.getElementById('new-comment-author');
+            if (!textInput || !authorInput) return;
+            
+            const text = textInput.value.trim();
+            const author = authorInput.value.trim();
+            
+            if (!text) {
+                alert(i18n.comm_err_text);
+                return;
+            }
+            if (!author) {
+                alert(i18n.comm_err_author);
+                return;
+            }
+            
+            const commentData = {
+                x: newCommentTempPoint.x,
+                y: newCommentTempPoint.y,
+                z: newCommentTempPoint.z,
+                camera: {
+                    x: camera.position.x,
+                    y: camera.position.y,
+                    z: camera.position.z
+                },
+                target: {
+                    x: controls.target.x,
+                    y: controls.target.y,
+                    z: controls.target.z
+                },
+                text: text,
+                author_name: author
+            };
+            
+            fetch(window.getApiUrl(`/api/comments/${encodeURIComponent(filename)}`), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(commentData)
+            })
+            .then(res => {
+                if (!res.ok) throw new Error(i18n.comm_err_save);
+                window.closeActiveBubble();
+                if (commentModeActive) window.toggleCommentMode();
+                window.loadComments();
+                
+                // Re-open comments panel to show the new comment in the list
+                const commentsPanel = document.getElementById('comments-panel');
+                if (commentsPanel && !commentsPanel.classList.contains('open')) {
+                    commentsPanel.classList.add('open');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert(i18n.comm_err_save);
+            });
+        };
+
+        window.deleteComment = function(commentId) {
+            if (!confirm(i18n.comm_confirm_delete)) return;
+            
+            fetch(window.getApiUrl(`/api/comments/${encodeURIComponent(filename)}/${commentId}`), {
+                method: 'DELETE'
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Błąd usuwania');
+                window.closeActiveBubble();
+                window.loadComments();
+            })
+            .catch(err => {
+                console.error(err);
+                alert(i18n.comm_err_delete);
+            });
+        };
+
+        window.closeActiveBubble = function() {
+            if (activeCommentBubble) {
+                activeCommentBubble.remove();
+                activeCommentBubble = null;
+            }
+            activeCommentId = null;
+            newCommentTempPoint = null;
+            const newForm = document.getElementById('new-comment-bubble');
+            if (newForm) newForm.remove();
+        };
+
+        window.saveReply = function(commentId) {
+            const textInput = document.getElementById(`reply-text-${commentId}`);
+            const authorInput = document.getElementById(`reply-author-${commentId}`);
+            if (!textInput || !authorInput) return;
+            
+            const text = textInput.value.trim();
+            const author = authorInput.value.trim();
+            
+            if (!text) {
+                alert(i18n.comm_err_reply);
+                return;
+            }
+            if (!author) {
+                alert(i18n.comm_err_author);
+                return;
+            }
+            
+            fetch(window.getApiUrl(`/api/comments/${encodeURIComponent(filename)}/${commentId}/replies`), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, author_name: author })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Błąd zapisu odpowiedzi');
+                window.loadComments();
+                setTimeout(() => window.openCommentBubble(commentId), 300);
+            })
+            .catch(err => {
+                console.error(err);
+                alert(i18n.comm_err_save);
+            });
+        };
+
+        window.deleteReply = function(commentId, replyId) {
+            if (!confirm(i18n.comm_confirm_delete_reply)) return;
+            
+            fetch(window.getApiUrl(`/api/comments/${encodeURIComponent(filename)}/${commentId}/replies/${replyId}`), {
+                method: 'DELETE'
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Błąd usuwania odpowiedzi');
+                window.loadComments();
+                setTimeout(() => window.openCommentBubble(commentId), 300);
+            })
+            .catch(err => {
+                console.error(err);
+                alert(i18n.comm_err_delete);
+            });
+        };
+
+        function getModelLayers(model) {
+            let root = model;
+            // If the root has exactly one child and it's a group, dive one level down to find the layers
+            if (root.children && root.children.length === 1 && !root.children[0].isMesh) {
+                root = root.children[0];
+            }
+            // Return only the named direct children (which represent the layers)
+            return root.children.filter(child => child.name && child.name.trim() !== '');
+        }
+
+        // Element tree visibility control
+        window.buildModelTree = function(model) {
+            const treeContainer = document.getElementById('model-elements-tree');
+            if (!treeContainer) return;
+            
+            treeContainer.innerHTML = '';
+            
+            const layers = getModelLayers(model);
+            
+            if (layers.length === 0) {
+                treeContainer.innerHTML = '<p style="font-size: 12px; color: var(--text-muted);">Brak zdefiniowanych warstw.</p>';
+                return;
+            }
+            
+            const eyeIconOpen = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+            const eyeIconClosed = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+
+            layers.forEach(node => {
+                const row = document.createElement('div');
+                row.className = 'element-visibility-row';
+                
+                const label = document.createElement('span');
+                label.style.fontSize = '12px';
+                label.style.fontWeight = '600';
+                label.style.overflow = 'hidden';
+                label.style.textOverflow = 'ellipsis';
+                label.style.whiteSpace = 'nowrap';
+                label.style.maxWidth = '200px';
+                label.title = node.name;
+                label.textContent = node.name;
+                
+                const btn = document.createElement('button');
+                btn.style.background = 'none';
+                btn.style.border = 'none';
+                btn.style.color = 'var(--text-color)';
+                btn.style.cursor = 'pointer';
+                btn.style.display = 'flex';
+                btn.style.alignItems = 'center';
+                btn.style.justifyContent = 'center';
+                btn.innerHTML = node.visible ? eyeIconOpen : eyeIconClosed;
+                btn.style.opacity = node.visible ? '1' : '0.5';
+                btn.title = 'Ukryj / Pokaż';
+                
+                btn.onclick = () => {
+                    node.visible = !node.visible;
+                    btn.innerHTML = node.visible ? eyeIconOpen : eyeIconClosed;
+                    btn.style.opacity = node.visible ? '1' : '0.5';
+                };
+                
+                row.appendChild(label);
+                row.appendChild(btn);
+                treeContainer.appendChild(row);
+            });
+        };
+
+        // View Mode control functions
+        window.setViewMode = function(mode) {
+            if (currentViewMode === mode) return;
+            
+            document.getElementById('btn-mode-materials').classList.toggle('active', mode === 'materials');
+            document.getElementById('btn-mode-clay').classList.toggle('active', mode === 'clay');
+            document.getElementById('btn-mode-xray').classList.toggle('active', mode === 'xray');
+            
+            applyViewMode(mode);
+        };
+
+        function applyViewMode(mode) {
+            const previousMode = currentViewMode;
+            currentViewMode = mode;
+            if (!model) return;
+            
+            // Configure tone mapping, exposure, shadows, light intensities, background presets
+            if (mode === 'clay') {
+                document.getElementById('sun-azimuth').value = 120;
+                document.getElementById('sun-elevation').value = 45;
+                document.getElementById('shadows-toggle').checked = true;
+                document.getElementById('shadow-transparency').value = 0.00;
+                document.getElementById('shadow-type-toggle').checked = true;
+                document.getElementById('sun-intensity').value = 1.5;
+                document.getElementById('ambient-intensity').value = 1.00;
+                document.getElementById('exposure-slider').value = 1.10;
+                
+                if (renderer) {
+                    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                }
+                
+                // Background: #ffffff
+                const dots = document.querySelectorAll('.color-dot');
+                window.changeBg('#ffffff', dots[0]);
+            } else if (mode === 'materials') {
+                document.getElementById('sun-azimuth').value = 120;
+                document.getElementById('sun-elevation').value = 45;
+                document.getElementById('shadows-toggle').checked = true;
+                document.getElementById('shadow-transparency').value = 0.70;
+                document.getElementById('shadow-type-toggle').checked = true;
+                document.getElementById('sun-intensity').value = 1.0;
+                document.getElementById('ambient-intensity').value = 0.70;
+                document.getElementById('exposure-slider').value = 0.60;
+                
+                if (renderer) {
+                    renderer.toneMapping = THREE.LinearToneMapping;
+                }
+                
+                // Background: #ffffff
+                const dots = document.querySelectorAll('.color-dot');
+                window.changeBg('#ffffff', dots[0]);
+            } else if (mode === 'xray') {
+                document.getElementById('sun-azimuth').value = 120;
+                document.getElementById('sun-elevation').value = 45;
+                document.getElementById('shadows-toggle').checked = false;
+                document.getElementById('shadow-transparency').value = 0.00;
+                document.getElementById('shadow-type-toggle').checked = false;
+                document.getElementById('sun-intensity').value = 1.0;
+                document.getElementById('ambient-intensity').value = 1.00;
+                document.getElementById('exposure-slider').value = 0.35;
+                
+                if (renderer) {
+                    renderer.toneMapping = THREE.LinearToneMapping;
+                }
+                
+                // Background: #0c0c10
+                const dots = document.querySelectorAll('.color-dot');
+                window.changeBg('#0c0c10', dots[2]);
+            }
+            
+            // Sync slider value text labels
+            document.getElementById('sun-azimuth-val').textContent = document.getElementById('sun-azimuth').value + '°';
+            document.getElementById('sun-elevation-val').textContent = document.getElementById('sun-elevation').value + '°';
+            document.getElementById('transparency-val').textContent = Math.round(parseFloat(document.getElementById('shadow-transparency').value) * 100) + '%';
+            document.getElementById('sun-intensity-val').textContent = parseFloat(document.getElementById('sun-intensity').value).toFixed(1);
+            document.getElementById('ambient-intensity-val').textContent = parseFloat(document.getElementById('ambient-intensity').value).toFixed(2);
+            document.getElementById('exposure-val').textContent = parseFloat(document.getElementById('exposure-slider').value).toFixed(2);
+            
+            // Update shadow controls visibility states
+            const transparencyCtrl = document.getElementById('transparency-control');
+            const typeRow = document.getElementById('shadow-type-row');
+            const shadowsEnabled = document.getElementById('shadows-toggle').checked;
+            if (shadowsEnabled) {
+                transparencyCtrl.style.opacity = '1';
+                transparencyCtrl.style.pointerEvents = 'auto';
+                typeRow.style.opacity = '1';
+                typeRow.style.pointerEvents = 'auto';
+            } else {
+                transparencyCtrl.style.opacity = '0.4';
+                transparencyCtrl.style.pointerEvents = 'none';
+                typeRow.style.opacity = '0.4';
+                typeRow.style.pointerEvents = 'none';
+            }
+            
+            // Apply updates to lighting and shadow map type
+            updateSun();
+            updateLightIntensities();
+            
+            if (ambientLight) {
+                ambientLight.intensity = parseFloat(document.getElementById('ambient-intensity').value);
+            }
+            if (renderer) {
+                renderer.toneMappingExposure = parseFloat(document.getElementById('exposure-slider').value);
+                const softShadowEnabled = document.getElementById('shadow-type-toggle').checked;
+                renderer.shadowMap.type = softShadowEnabled ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
+            }
+            
+            // Apply environment reflections (only in Materials mode)
+            if (mode === 'materials') {
+                scene.environment = envMap;
+            } else {
+                scene.environment = null;
+            }
+            
+            // Apply mesh materials
+            model.traverse(node => {
+                if (node.isMesh && node.material) {
+                    if (!node.userData.originalMaterial) {
+                        node.userData.originalMaterial = node.material;
+                    }
+                    
+                    const origMat = node.userData.originalMaterial;
+                    
+                    if (mode === 'materials') {
+                        node.material = origMat;
+                    } else {
+                        const isTransparent = origMat.transparent || origMat.opacity < 1.0;
+                        if (mode === 'clay') {
+                            node.material = isTransparent ? clayMaterialTransparent : clayMaterialOpaque;
+                        } else if (mode === 'xray') {
+                            node.material = isTransparent ? xrayMaterialTransparent : xrayMaterialOpaque;
+                        }
+                    }
+                }
+            });
+            
+            // Recompile shaders
+            scene.traverse(node => {
+                if (node.isMesh && node.material) {
+                    node.material.needsUpdate = true;
+                }
+            });
+        }
+
+        // Start the application after all functions are defined
+        const passwordRequired = {{ 'true' if password_required else 'false' }};
+        
+        window.openPrivacyModal = function(e) {
+            if (e) e.preventDefault();
+            document.getElementById('privacy-modal').style.display = 'flex';
+        };
+        window.closePrivacyModal = function() {
+            document.getElementById('privacy-modal').style.display = 'none';
+        };
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') window.closePrivacyModal();
+        });
+        document.getElementById('privacy-modal').addEventListener('click', function(e) {
+            if (e.target === this) window.closePrivacyModal();
+        });
+
+        if (passwordRequired) {
+            const storedPassword = sessionStorage.getItem('model_password_' + filename);
+            if (storedPassword) {
+                window.verifyStoredPassword(storedPassword);
+            } else {
+                const overlay = document.getElementById('password-overlay');
+                if (overlay) overlay.style.display = 'flex';
+            }
+        } else {
+            window.startApp();
+        }
+    </script>
+</body>
+</html>

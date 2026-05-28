@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t.dash_title }}</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #08080c;
+            --card-bg: rgba(18, 18, 24, 0.6);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: linear-gradient(135deg, {{ s.primary_color }} 0%, {{ s.accent_color }} 100%);
+            --primary-hover: linear-gradient(135deg, {{ s.primary_color }} 0%, {{ s.accent_color }} 100%);
+            --accent: {{ s.accent_color }};
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .header-left .logo {
+            height: 46px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .title-area h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: var(--primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title-area p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-logout {
+            text-decoration: none;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 42px;
+            padding: 0 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Upload Area */
+        .upload-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-card.dragover {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.05);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+        }
+
+        .upload-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-zone:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .upload-zone svg {
+            width: 48px;
+            height: 48px;
+            fill: none;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-zone:hover svg {
+            stroke: var(--accent);
+            transform: translateY(-3px);
+        }
+
+        .upload-zone h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .upload-zone p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        /* Gallery Grid */
+        h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            letter-spacing: -0.3px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+            gap: 24px;
+        }
+
+        .model-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .model-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .model-header {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .model-icon {
+            width: 46px;
+            height: 46px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .model-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: none;
+            stroke: var(--accent);
+            stroke-width: 2;
+        }
+
+        .model-info {
+            flex: 1;
+            min-width: 0; /* truncate long names */
+        }
+
+        .model-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .model-size {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-row button, .btn-row a, .btn-action {
+            flex: 1;
+            padding: 11px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.15);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            margin-top: 10px;
+            width: 100%;
+            padding: 11px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        /* Range Sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            accent-color: var(--accent);
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border: 0;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #10b981;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Empty state */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px dashed var(--card-border);
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            stroke: var(--text-muted);
+            stroke-width: 1.5;
+            margin-bottom: 20px;
+        }
+
+        /* Modern Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 38px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-round {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .slider-round:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider-round {
+            background: var(--primary);
+        }
+
+        input:checked + .slider-round:before {
+            transform: translateX(18px);
+        }
+
+        /* Settings Drawer Styles */
+        #settings-modal {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 100%;
+            max-width: 420px;
+            height: 100vh;
+            background: rgba(11, 11, 15, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+            z-index: 2000;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        #settings-modal.open {
+            transform: translateX(0);
+        }
+
+        /* Responsive Layout for Mobile / Narrow Viewports */
+        @media (max-width: 640px) {
+            header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 16px;
+                padding-bottom: 24px;
+            }
+            .header-left {
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+            }
+            .header-right {
+                width: 100%;
+                justify-content: center;
+                gap: 8px;
+            }
+            .logo {
+                height: 40px;
+            }
+        }
+        @media (max-width: 480px) {
+            .btn-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .btn-row button, .btn-row a, .btn-row > div {
+                width: 100% !important;
+                flex: none !important;
+            }
+        }
+        /* Dropdown options readability */
+        select option {
+            background-color: #121218;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div class="header-left">
+                {% if s.logo_filename %}
+                <img class="logo" src="/logo.png" alt="Logo">
+                {% else %}
+                <img class="logo" src="https://cloud.codearch.pl/themes/_branding/codearch.png" alt="Codearch Logo">
+                {% endif %}
+                <div class="title-area">
+                    <h1>{{ s.hub_name }}</h1>
+                    <p>{{ t.dash_sub }}</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <a href="/api/lang/change/{% if current_lang == 'pl' %}en{% else %}pl{% endif %}" class="btn-logout" style="display: flex; align-items: center; gap: 6px;">
+                    🌐 {% if current_lang == 'pl' %}EN{% else %}PL{% endif %}
+                </a>
+                {% if s.buymeacoffee_url %}
+                <a href="{{ s.buymeacoffee_url }}" target="_blank" class="btn-logout" title="{{ 'Wesprzyj projekt na Buy Me a Coffee' if current_lang == 'pl' else 'Support the project on Buy Me a Coffee' }}" style="width: 42px; padding: 0; background: rgba(255, 221, 0, 0.15); border-color: rgba(255, 221, 0, 0.3); color: #ffdd00; display: inline-flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                        <line x1="6" y1="2" x2="6" y2="4"></line>
+                        <line x1="10" y1="2" x2="10" y2="4"></line>
+                        <line x1="14" y1="2" x2="14" y2="4"></line>
+                    </svg>
+                </a>
+                {% endif %}
+                <button class="btn-logout" onclick="toggleSettingsModal()" title="{{ t.settings_btn }}" style="width: 42px; padding: 0; cursor: pointer; font-family: inherit;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+                <a href="/logout" class="btn-logout" title="{{ t.logout }}" style="width: 42px; padding: 0;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </a>
+            </div>
+        </header>
+
+        <!-- Upload section -->
+        <div class="upload-card" id="drop-zone">
+            <form id="upload-form">
+                <label class="upload-zone" for="file-input">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <h3>{{ t.upload_title }}</h3>
+                    <p>{{ t.upload_sub }}</p>
+                    <input type="file" id="file-input" name="file" accept=".glb,.gltf" onchange="handleFileSelect(this)">
+                </label>
+            </form>
+            <div id="progress-container" style="display: none; padding: 20px; text-align: center;">
+                <div style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text-color);">
+                    {{ t.upload_progress }} <span id="progress-filename" style="color: var(--accent);"></span>
+                </div>
+                <div style="width: 100%; background: rgba(255, 255, 255, 0.05); height: 8px; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.06); margin-bottom: 12px; position: relative;">
+                    <div id="progress-bar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.1s ease; border-radius: 4px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted);">
+                    <span id="progress-percentage">0%</span>
+                    <span id="progress-bytes">0 / 0 MB</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gallery -->
+        <h2>{{ t.your_models }}</h2>
+        <div class="grid">
+            {% if files %}
+                {% for file in files %}
+                <div class="model-card">
+                    <div>
+                        <div class="model-header">
+                            <div class="model-icon">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                                </svg>
+                            </div>
+                            <div class="model-info">
+                                <div class="model-name" title="{{ file.name }}">{{ file.name }}</div>
+                                <div class="model-size">{{ file.size }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <div class="btn-row">
+                            <a href="/show/{{ file.name }}" target="_blank" class="btn-primary">{{ t.open_model }}</a>
+                            <button onclick="copyLink('{{ file.name }}')" class="btn-secondary">{{ t.copy_link }}</button>
+                        </div>
+                        <div class="btn-row">
+                            <button onclick="copyIframe('{{ file.name }}')" class="btn-secondary">{{ t.copy_iframe }}</button>
+                            <div style="flex: 1; display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.03); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06); box-sizing: border-box;">
+                                <span style="font-size: 14px; font-weight: 600; color: var(--text-color);">{{ t.comments }}</span>
+                                <label class="switch">
+                                    <input type="checkbox" {% if file.comments_enabled %}checked{% endif %} onchange="toggleComments('{{ file.name }}', this)">
+                                    <span class="slider-round"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="btn-row" style="flex-direction: column; gap: 8px; background: rgba(255, 255, 255, 0.02); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06); box-sizing: border-box; width: 100%;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                <span style="font-size: 14px; font-weight: 600; color: var(--text-color); display: flex; align-items: center; gap: 8px;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                    </svg>
+                                    {{ t.dash_password }}
+                                </span>
+                                <label class="switch">
+                                    <input type="checkbox" id="pwd-toggle-{{ file.name|replace('.', '-') }}" {% if file.password_enabled %}checked{% endif %} onchange="togglePasswordProtection('{{ file.name }}', this)">
+                                    <span class="slider-round"></span>
+                                </label>
+                            </div>
+                            <div id="pwd-input-container-{{ file.name|replace('.', '-') }}" style="display: {% if file.password_enabled %}block{% else %}none{% endif %}; width: 100%; margin-top: 4px;">
+                                <input type="text" id="pwd-input-{{ file.name|replace('.', '-') }}" value="{{ file.password_value }}" placeholder="{{ t.dash_password_placeholder }}" onblur="saveModelPassword('{{ file.name }}')" style="width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: #fff; padding: 6px 8px; font-size: 13px; outline: none; font-family: inherit; box-sizing: border-box;">
+                            </div>
+                        </div>
+                        <form action="/delete/{{ file.name }}" method="POST" onsubmit="return confirm('{{ t.confirm_delete_model }}')">
+                            <button type="submit" class="btn-danger" style="margin-top: 5px;">{{ t.delete_model }}</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <rect x="2" y="2" width="20" height="20" rx="2" ry="2" stroke-width="2"></rect>
+                        <path d="M12 8v8" stroke-width="2"></path>
+                        <path d="M8 12h8" stroke-width="2"></path>
+                    </svg>
+                    <h3>{{ t.no_models }}</h3>
+                    <p>{{ t.no_models_sub }}</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <footer style="margin-top: 80px; padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center; font-size: 13px; color: var(--text-muted); display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span>{{ t.footer_powered_by | safe }}</span>
+            <span style="color: rgba(255,255,255,0.1);">|</span>
+            <a href="#" onclick="openPrivacyModal(event)" style="color: var(--text-muted); text-decoration: none; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">{{ t.privacy_policy_title }}</a>
+        </footer>
+    </div>
+
+    <!-- Settings Drawer (Right Side sliding panel) -->
+    <div id="settings-modal">
+        <div style="padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+            <h3 style="font-size: 20px; font-weight: 700; color: #fff;">⚙️ {{ t.settings_title }}</h3>
+            <button onclick="toggleSettingsModal()" style="background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+        </div>
+        
+        <div style="flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 24px;">
+            <form action="/api/admin/settings" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Localization & General -->
+            <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04);">
+                <h4 style="font-size: 14px; color: var(--accent); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">{{ t.settings_title if current_lang == 'en' else 'Ogólne i Język' }}</h4>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'Default Language' if current_lang == 'en' else 'Domyślny język' }}</label>
+                        <select name="lang" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 8px; font-size: 14px; outline: none; font-family: inherit;">
+                            <option value="pl" {% if s.lang == 'pl' %}selected{% endif %}>Polski</option>
+                            <option value="en" {% if s.lang == 'en' %}selected{% endif %}>English</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'Portal Name (Hub Name)' if current_lang == 'en' else 'Nazwa portalu (Hub Name)' }}</label>
+                        <input type="text" name="hub_name" value="{{ s.hub_name }}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 8px; font-size: 14px; outline: none; font-family: inherit;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'Buy Me a Coffee Link (empty to hide)' if current_lang == 'en' else 'Link Buy Me a Coffee (zostaw puste, aby ukryć)' }}</label>
+                        <input type="text" name="buymeacoffee_url" value="{{ s.buymeacoffee_url or '' }}" placeholder="https://www.buymeacoffee.com/..." style="background: rgba(255, 221, 0, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: #fff; padding: 8px; font-size: 14px; outline: none; font-family: inherit;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branding & Colors -->
+            <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04);">
+                <h4 style="font-size: 14px; color: var(--accent); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">{{ 'Branding & Theme' if current_lang == 'en' else 'Wygląd i Branding' }}</h4>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'Portal Logo (PNG, JPG, SVG)' if current_lang == 'en' else 'Logo portalu (PNG, JPG, SVG)' }}</label>
+                        <input type="file" name="logo" accept="image/*" style="font-size: 13px; color: var(--text-muted); font-family: inherit;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'Favicon Icon (ICO, PNG, SVG)' if current_lang == 'en' else 'Favicon ikona (ICO, PNG, SVG)' }}</label>
+                        <input type="file" name="favicon" accept="image/*" style="font-size: 13px; color: var(--text-muted); font-family: inherit;">
+                    </div>
+                    <div style="display: flex; gap: 16px;">
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 12px; color: var(--text-muted);">{{ 'Primary Color' if current_lang == 'en' else 'Kolor główny' }}</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="color" name="primary_color" value="{{ s.primary_color }}" style="border: none; background: none; width: 32px; height: 32px; cursor: pointer;">
+                                <span style="font-size: 13px; font-family: monospace;">{{ s.primary_color }}</span>
+                            </div>
+                        </div>
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 12px; color: var(--text-muted);">{{ 'Accent Color' if current_lang == 'en' else 'Kolor akcentu' }}</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="color" name="accent_color" value="{{ s.accent_color }}" style="border: none; background: none; width: 32px; height: 32px; cursor: pointer;">
+                                <span style="font-size: 13px; font-family: monospace;">{{ s.accent_color }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collaboration & Roles -->
+            <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04);">
+                <h4 style="font-size: 14px; color: var(--accent); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">{{ 'Collaboration & Personas' if current_lang == 'en' else 'Współpraca i Role' }}</h4>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; gap: 16px;">
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 12px; color: var(--text-muted);">{{ 'Admin Role Name' if current_lang == 'en' else 'Rola administratora' }}</label>
+                            <input type="text" name="persona_admin" value="{{ s.persona_admin }}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 8px; font-size: 14px; outline: none; width: 100%; font-family: inherit;">
+                        </div>
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 12px; color: var(--text-muted);">{{ 'Viewer Role Name' if current_lang == 'en' else 'Rola klienta' }}</label>
+                            <input type="text" name="persona_viewer" value="{{ s.persona_viewer }}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 8px; font-size: 14px; outline: none; width: 100%; font-family: inherit;">
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px;">
+                        <span style="font-size: 13px; color: var(--text-color);">{{ 'Client can edit own comments' if current_lang == 'en' else 'Klient może edytować swoje komentarze' }}</span>
+                        <label class="switch">
+                            <input type="checkbox" name="client_can_edit_own" value="1" {% if s.client_can_edit_own == '1' %}checked{% endif %}>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px;">
+                        <span style="font-size: 13px; color: var(--text-color);">{{ 'Client can delete own comments' if current_lang == 'en' else 'Klient może usuwać swoje komentarze' }}</span>
+                        <label class="switch">
+                            <input type="checkbox" name="client_can_delete_own" value="1" {% if s.client_can_delete_own == '1' %}checked{% endif %}>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Default 3D Viewer Settings -->
+            <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04);">
+                <h4 style="font-size: 14px; color: var(--accent); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">{{ 'Default 3D Viewer Settings' if current_lang == 'en' else 'Domyślne Ustawienia Sceny 3D' }}</h4>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'Default Display Mode' if current_lang == 'en' else 'Domyślny tryb wyświetlania' }}</label>
+                        <select name="default_view_mode" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 8px; font-size: 14px; outline: none; font-family: inherit;">
+                            <option value="clay" {% if s.default_view_mode == 'clay' %}selected{% endif %}>{{ t.viewer_clay }}</option>
+                            <option value="materials" {% if s.default_view_mode == 'materials' %}selected{% endif %}>{{ t.viewer_materials }}</option>
+                            <option value="xray" {% if s.default_view_mode == 'xray' %}selected{% endif %}>{{ t.viewer_xray }}</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px;">
+                        <span style="font-size: 13px; color: var(--text-color);">{{ 'Shadows enabled by default' if current_lang == 'en' else 'Cienie włączone domyślnie' }}</span>
+                        <label class="switch">
+                            <input type="checkbox" name="default_shadows" value="1" {% if s.default_shadows == '1' %}checked{% endif %}>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px;">
+                        <span style="font-size: 13px; color: var(--text-color);">{{ 'Soft shadows' if current_lang == 'en' else 'Miękkie cienie' }}</span>
+                        <label class="switch">
+                            <input type="checkbox" name="default_shadows_soft" value="1" {% if s.default_shadows_soft == '1' %}checked{% endif %}>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'Shadow opacity' if current_lang == 'en' else 'Przezroczystość cieni' }}</label>
+                        <input type="range" name="default_shadow_transparency" min="0" max="1" step="0.05" value="{{ s.default_shadow_transparency }}" style="width: 100%;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'Sun intensity' if current_lang == 'en' else 'Natężenie słońca' }}</label>
+                        <input type="range" name="default_sun_intensity" min="0" max="6" step="0.1" value="{{ s.default_sun_intensity }}" style="width: 100%;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'Ambient light intensity' if current_lang == 'en' else 'Światło otoczenia' }}</label>
+                        <input type="range" name="default_ambient_intensity" min="0" max="2" step="0.05" value="{{ s.default_ambient_intensity }}" style="width: 100%;">
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px;">
+                        <span style="font-size: 13px; color: var(--text-color);">{{ 'Auto-rotate camera' if current_lang == 'en' else 'Automatyczny obrót' }}</span>
+                        <label class="switch">
+                            <input type="checkbox" name="default_auto_rotate" value="1" {% if s.default_auto_rotate == '1' %}checked{% endif %}>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technical & Upload Limits -->
+            <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04);">
+                <h4 style="font-size: 14px; color: var(--accent); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">{{ 'File Upload Limits' if current_lang == 'en' else 'Wielkość Wgrywanych Plików' }}</h4>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 12px; color: var(--text-muted);">{{ 'Max File Size (MB)' if current_lang == 'en' else 'Limit pliku 3D (MB)' }}</label>
+                    <input type="number" name="max_upload_size" value="{{ s.max_upload_size }}" min="10" max="500" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 8px; font-size: 14px; outline: none; width: 100%; font-family: inherit;">
+                </div>
+            </div>
+            <!-- Submit Button -->
+            <button type="submit" class="btn-primary" style="padding: 14px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; text-align: center; font-family: inherit;">
+                {{ t.save_settings_btn }}
+            </button>
+        </form>
+
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 8px 0;">
+
+        <!-- Zmiana Hasła -->
+        <form action="/api/admin/change_password" method="POST" style="display: flex; flex-direction: column; gap: 20px; padding-bottom: 24px;">
+            <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04);">
+                <h4 style="font-size: 14px; color: var(--accent); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">{{ 'Change Admin Password' if current_lang == 'en' else 'Zmiana Hasła Administratora' }}</h4>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'Current Password' if current_lang == 'en' else 'Obecne hasło' }}</label>
+                        <input type="password" name="current_password" placeholder="••••••••" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 8px; font-size: 14px; outline: none; font-family: inherit;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'New Password' if current_lang == 'en' else 'Nowe hasło' }}</label>
+                        <input type="password" name="new_password" placeholder="••••••••" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 8px; font-size: 14px; outline: none; font-family: inherit;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-muted);">{{ 'Confirm New Password' if current_lang == 'en' else 'Potwierdź nowe hasło' }}</label>
+                        <input type="password" name="confirm_new_password" placeholder="••••••••" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 8px; font-size: 14px; outline: none; font-family: inherit;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Password Button -->
+            <button type="submit" class="btn-primary" style="padding: 14px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; text-align: center; font-family: inherit; background: var(--accent);">
+                {{ 'Confirm' if current_lang == 'en' else 'Zatwierdź' }}
+            </button>
+        </form>
+    </div>
+</div>
+    
+    <!-- Settings Overlay -->
+    <div id="settings-overlay" onclick="toggleSettingsModal()" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1999; display: none; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);"></div>
+    
+    <!-- Privacy Policy Modal -->
+    <div id="privacy-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(8, 8, 12, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10000; display: none; justify-content: center; align-items: center; box-sizing: border-box; padding: 20px;">
+        <div style="background: rgba(18, 18, 24, 0.95); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 24px; max-width: 440px; width: 100%; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); position: relative; color: var(--text-color); font-family: 'Outfit', sans-serif; text-align: left;">
+            <button onclick="closePrivacyModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+                🛡️ {{ t.privacy_policy_title }}
+            </h3>
+            <div style="font-size: 13px; line-height: 1.6; color: var(--text-muted); display: flex; flex-direction: column; gap: 10px;">
+                {{ t.privacy_policy_text | safe }}
+            </div>
+            <button onclick="closePrivacyModal()" style="margin-top: 20px; width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                {{ 'Close' if current_lang == 'en' else 'Zamknij' }}
+            </button>
+        </div>
+    </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">Skopiowano do schowka!</div>
+
+    <script>
+        // Drag and drop logic
+        const dropZone = document.getElementById('drop-zone');
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('file-input');
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length) {
+                fileInput.files = files;
+                uploadFile(files[0]);
+            }
+        }, false);
+
+        function handleFileSelect(input) {
+            if (input.files && input.files.length > 0) {
+                uploadFile(input.files[0]);
+            }
+        }
+
+        function uploadFile(file) {
+            if (!file) return;
+            
+            const maxMB = {{ s.max_upload_size }};
+            if (file.size > maxMB * 1024 * 1024) {
+                showToast(`{{ t.upload_err_size }}`.replace('{limit}', maxMB));
+                return;
+            }
+            
+            const name = file.name;
+            const ext = name.split('.').pop().toLowerCase();
+            if (ext !== 'glb' && ext !== 'gltf') {
+                showToast('{{ t.upload_err_format }}');
+                return;
+            }
+            
+            const uploadForm = document.getElementById('upload-form');
+            const progressContainer = document.getElementById('progress-container');
+            const filenameEl = document.getElementById('progress-filename');
+            const progressBar = document.getElementById('progress-bar');
+            const percentageEl = document.getElementById('progress-percentage');
+            const bytesEl = document.getElementById('progress-bytes');
+            
+            // Show progress UI, hide form
+            uploadForm.style.display = 'none';
+            progressContainer.style.display = 'block';
+            filenameEl.textContent = file.name;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percent + '%';
+                    percentageEl.textContent = percent + '%';
+                    
+                    const loadedMB = (e.loaded / (1024 * 1024)).toFixed(2);
+                    const totalMB = (e.total / (1024 * 1024)).toFixed(2);
+                    bytesEl.textContent = `${loadedMB} / ${totalMB} MB`;
+                }
+            });
+            
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    progressBar.style.width = '100%';
+                    percentageEl.textContent = '100%';
+                    showToast('{{ t.upload_success }}');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    let errMsg = '{{ t.admin_settings_err }}';
+                    try {
+                        const res = JSON.parse(xhr.responseText);
+                        if (res.detail) errMsg = res.detail;
+                    } catch(e) {}
+                    alert(errMsg);
+                    resetUploadUI();
+                }
+            });
+            
+            xhr.addEventListener('error', () => {
+                alert('Wystąpił błąd połączenia sieciowego.');
+                resetUploadUI();
+            });
+            
+            xhr.open('POST', '/upload', true);
+            xhr.send(formData);
+            
+            function resetUploadUI() {
+                progressBar.style.width = '0%';
+                percentageEl.textContent = '0%';
+                bytesEl.textContent = '0 / 0 MB';
+                progressContainer.style.display = 'none';
+                uploadForm.style.display = 'block';
+                fileInput.value = '';
+            }
+        }
+
+        // Copy utilities
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            if (isError) {
+                toast.style.background = '#ef4444';
+                toast.style.boxShadow = '0 10px 20px rgba(239, 68, 68, 0.2)';
+            } else {
+                toast.style.background = '#10b981';
+                toast.style.boxShadow = '0 10px 20px rgba(16, 185, 129, 0.2)';
+            }
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        function copyLink(filename) {
+            const url = `${window.location.origin}/show/${encodeURIComponent(filename)}`;
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('{{ t.toast_copied_link }}');
+            }).catch(err => {
+                console.error('Błąd kopiowania: ', err);
+            });
+        }
+
+        function copyIframe(filename) {
+            const url = `${window.location.origin}/embed/${encodeURIComponent(filename)}`;
+            const iframe = `<iframe src="${url}" width="100%" height="600px" style="border: none; border-radius: 12px; background-color: #0d0d12;" allow="ar" allowfullscreen></iframe>`;
+            navigator.clipboard.writeText(iframe).then(() => {
+                showToast('{{ t.toast_copied_iframe }}');
+            }).catch(err => {
+                console.error('Błąd kopiowania: ', err);
+            });
+        }
+
+        function toggleComments(filename, checkbox) {
+            checkbox.disabled = true;
+            fetch(`/api/settings/${encodeURIComponent(filename)}/toggle_comments`, {
+                method: 'POST'
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Błąd serwera');
+                return res.json();
+            })
+            .then(data => {
+                checkbox.checked = data.comments_enabled;
+                showToast(data.comments_enabled ? '{{ t.toast_comments_on }}' : '{{ t.toast_comments_off }}');
+            })
+            .catch(err => {
+                console.error(err);
+                checkbox.checked = !checkbox.checked; // revert
+                showToast('{{ t.toast_comments_err }}');
+            })
+            .finally(() => {
+                checkbox.disabled = false;
+            });
+        }
+
+        function togglePasswordProtection(filename, checkbox) {
+            const safeName = filename.replace(/\./g, '-');
+            const container = document.getElementById('pwd-input-container-' + safeName);
+            const input = document.getElementById('pwd-input-' + safeName);
+            
+            if (checkbox.checked) {
+                container.style.display = 'block';
+                input.focus();
+            } else {
+                container.style.display = 'none';
+                saveModelPassword(filename);
+            }
+        }
+
+        function saveModelPassword(filename) {
+            const safeName = filename.replace(/\./g, '-');
+            const toggle = document.getElementById('pwd-toggle-' + safeName);
+            const input = document.getElementById('pwd-input-' + safeName);
+            
+            const passwordEnabled = toggle.checked;
+            const passwordValue = input.value;
+            
+            toggle.disabled = true;
+            input.disabled = true;
+            
+            fetch(`/api/settings/${encodeURIComponent(filename)}/password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    password_enabled: passwordEnabled,
+                    password_value: passwordValue
+                })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Błąd zapisu ustawień hasła');
+                return res.json();
+            })
+            .then(data => {
+                showToast(data.password_enabled ? 'Zapisano hasło modelu!' : 'Wyłączono ochronę hasłem!');
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Błąd podczas zapisywania hasła!', true);
+                // Revert
+                if (!passwordEnabled) {
+                    toggle.checked = true;
+                    document.getElementById('pwd-input-container-' + safeName).style.display = 'block';
+                } else {
+                    toggle.checked = false;
+                    document.getElementById('pwd-input-container-' + safeName).style.display = 'none';
+                }
+            })
+            .finally(() => {
+                toggle.disabled = false;
+                input.disabled = false;
+            });
+        }
+
+        function toggleSettingsModal() {
+            const modal = document.getElementById('settings-modal');
+            const overlay = document.getElementById('settings-overlay');
+            modal.classList.toggle('open');
+            if (modal.classList.contains('open')) {
+                overlay.style.display = 'block';
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('success')) {
+                showToast('{{ t.admin_settings_success }}', false);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else if (urlParams.has('success_msg')) {
+                showToast(urlParams.get('success_msg'), false);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else if (urlParams.has('error')) {
+                showToast(urlParams.get('error'), true);
+                toggleSettingsModal();
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
+
+        function openPrivacyModal(e) {
+            if (e) e.preventDefault();
+            document.getElementById('privacy-modal').style.display = 'flex';
+        }
+        function closePrivacyModal() {
+            document.getElementById('privacy-modal').style.display = 'none';
+        }
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closePrivacyModal();
+        });
+        document.getElementById('privacy-modal').addEventListener('click', function(e) {
+            if (e.target === this) closePrivacyModal();
+        });
+    </script>
+</body>
+</html>
